@@ -5,6 +5,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"ingenhouzs.com/chesshouzs/go-game/controllers"
 	"ingenhouzs.com/chesshouzs/go-game/middlewares"
 	"ingenhouzs.com/chesshouzs/go-game/models"
@@ -19,7 +20,7 @@ func main() {
 		e.Logger.Fatal(err.Error())
 	}
 
-	e.Use(middlewares.MiddlewareLogging)
+	e.Use(middleware.BodyDump(middlewares.Logger))
 
 	postgresConnection := models.SqlConnection{
 		Driver:   os.Getenv("POSTGRES_DB_DRIVER"),
