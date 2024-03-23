@@ -3,6 +3,7 @@ package middlewares
 import (
 	"bytes"
 	"io"
+	"os"
 	"time"
 
 	"github.com/labstack/echo"
@@ -28,7 +29,7 @@ func makeLogEntry(c echo.Context) *log.Entry {
 	bodyString := string(bodyBytes)
 
 	return log.WithFields(log.Fields{
-		"at":     time.Now().Format("2006-01-02 15:04:05"),
+		"at":     time.Now().Format(os.Getenv("TIME_FORMAT")),
 		"method": c.Request().Method,
 		"uri":    c.Request().URL.String(),
 		"ip":     c.Request().RemoteAddr,
