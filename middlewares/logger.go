@@ -11,11 +11,13 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
-func LogRequest(c echo.Context, requestBody []byte) string {
+func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge {
+	startTime := time.Now()
+	requestID := uuid.NewString()
 	data := models.RequestLogData{
 		Level:     "INFO",
 		Type:      "REQUEST",
-		RequestID: uuid.NewString(),
+		RequestID: requestID,
 		Header:    helpers.ParseHeadersToString(c.Request().Header),
 		Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
 		Host:      c.Request().Host,
@@ -31,20 +33,27 @@ func LogRequest(c echo.Context, requestBody []byte) string {
 		message := "Failed to write request log : " + err.Error()
 		helpers.WriteErrLog(message)
 		c.Logger().Debug(message)
-		return data.RequestID
+		return models.RequestResponseBridge{RequestID: requestID, StartTime: startTime}
 	}
 
 	message := string(stringData)
 	helpers.WriteOutLog(message)
 	c.Logger().Debug(message)
-	return data.RequestID
+	return models.RequestResponseBridge{RequestID: requestID, StartTime: startTime}
 }
 
-func LogResponse(c echo.Context, requestID string, responseBody []byte) {
+func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, responseBody []byte) {
 	data := models.ResponseLogData{
-		Level:     "INFO",
-		Type:      "RESPONSE",
-		RequestID: requestID,
+		Level:        "INFO",
+		Type:         "RESPONSE",
+		RequestID:    requestMetadata.RequestID,
+		Header:       helpers.ParseHeadersToString(c.Request().Header),
+		Time:         time.Now().Format(os.Getenv("TIME_FORMAT")),
+		URI:          c.Request().URL.String(),
+		Status:       c.Response().Status,
+		Response:     string(responseBody),
+		LatencyHuman: time.Since(requestMetadata.StartTime).String(),
+		BytesOut:     len(responseBody),
 	}
 
 	stringData, err := json.Marshal(data)
@@ -60,6 +69,6 @@ func LogResponse(c echo.Context, requestID string, responseBody []byte) {
 }
 
 func Logger(c echo.Context, requestBody []byte, responseBody []byte) {
-	requestID := LogRequest(c, requestBody)
-	LogResponse(c, requestID, responseBody)
+	data := LogRequest(c, requestBody)
+	LogResponse(c, data, responseBody)
 }

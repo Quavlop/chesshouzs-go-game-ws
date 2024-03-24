@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type RequestLogData struct {
 	Level     string `json:"level"`
 	Type      string `json:"type"`
@@ -21,8 +23,13 @@ type ResponseLogData struct {
 	Header       string `json:"header"`
 	Time         string `json:"time"`
 	URI          string `json:"uri"`
-	Status       string `json:"status"`
+	Status       int    `json:"status"`
 	Response     string `json:"response"`
 	LatencyHuman string `json:"latency_human"`
 	BytesOut     int    `json:"bytes_out"`
+}
+
+type RequestResponseBridge struct {
+	RequestID string    `json:"request_id"`
+	StartTime time.Time `json:"time"`
 }

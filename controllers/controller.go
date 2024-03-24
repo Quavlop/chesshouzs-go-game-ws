@@ -24,5 +24,5 @@ func GameRoutes(e *echo.Echo, controller *Controller) {
 	route := e.Group("/")
 
 	route.GET("", func(c echo.Context) error { return nil })
-	route.POST("", func(c echo.Context) error { return c.JSON(http.StatusConflict, "") })
+	route.POST("", func(c echo.Context) error { return c.JSON(http.StatusConflict, "sssss") })
 }
