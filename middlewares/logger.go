@@ -1,44 +1,65 @@
 package middlewares
 
 import (
-	"bytes"
-	"io"
+	"encoding/json"
+	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo"
-	log "github.com/sirupsen/logrus"
+	"ingenhouzs.com/chesshouzs/go-game/helpers"
+	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
-func makeLogEntry(c echo.Context) *log.Entry {
-	if c == nil {
-		return log.WithFields(log.Fields{
-			"at": time.Now().Format("2006-01-02 15:04:05"),
-		})
+func LogRequest(c echo.Context, requestBody []byte) string {
+	data := models.RequestLogData{
+		Level:     "INFO",
+		Type:      "REQUEST",
+		RequestID: uuid.NewString(),
+		Header:    helpers.ParseHeadersToString(c.Request().Header),
+		Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
+		Host:      c.Request().Host,
+		Method:    c.Request().Method,
+		URI:       c.Request().URL.String(),
+		Body:      string(requestBody),
+		RemoteIP:  c.Request().RemoteAddr,
+		BytesIn:   len(requestBody),
 	}
 
-	bodyBytes, err := io.ReadAll(c.Request().Body)
+	stringData, err := json.Marshal(data)
 	if err != nil {
-		log.Errorf("Error reading request body: %s", err)
-		return nil
+		message := "Failed to write request log : " + err.Error()
+		helpers.WriteErrLog(message)
+		c.Logger().Debug(message)
+		return data.RequestID
 	}
-	defer c.Request().Body.Close()
 
-	c.Request().Body = io.NopCloser(bytes.NewReader(bodyBytes))
-
-	bodyString := string(bodyBytes)
-
-	return log.WithFields(log.Fields{
-		"at":     time.Now().Format("2006-01-02 15:04:05"),
-		"method": c.Request().Method,
-		"uri":    c.Request().URL.String(),
-		"ip":     c.Request().RemoteAddr,
-		"body":   bodyString,
-	})
+	message := string(stringData)
+	helpers.WriteOutLog(message)
+	c.Logger().Debug(message)
+	return data.RequestID
 }
 
-func MiddlewareLogging(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		makeLogEntry(c).Info("incoming request")
-		return next(c)
+func LogResponse(c echo.Context, requestID string, responseBody []byte) {
+	data := models.ResponseLogData{
+		Level:     "INFO",
+		Type:      "RESPONSE",
+		RequestID: requestID,
 	}
+
+	stringData, err := json.Marshal(data)
+	if err != nil {
+		message := "Failed to write response log : " + err.Error()
+		helpers.WriteErrLog(message)
+		c.Logger().Debug(message)
+	}
+
+	message := string(stringData)
+	helpers.WriteOutLog(message)
+	c.Logger().Debug(message)
+}
+
+func Logger(c echo.Context, requestBody []byte, responseBody []byte) {
+	requestID := LogRequest(c, requestBody)
+	LogResponse(c, requestID, responseBody)
 }
