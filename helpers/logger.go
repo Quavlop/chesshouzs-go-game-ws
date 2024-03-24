@@ -37,3 +37,10 @@ func ParseHeadersToString(header http.Header) string {
 
 	return result
 }
+
+func MapStatusResponseToLogLevel(status int) string {
+	if status >= 100 && status < 500 {
+		return "INFO"
+	}
+	return "ERROR"
+}

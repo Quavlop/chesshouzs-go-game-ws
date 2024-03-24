@@ -43,8 +43,9 @@ func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge
 }
 
 func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, responseBody []byte) {
+	logLevel := helpers.MapStatusResponseToLogLevel(c.Response().Status)
 	data := models.ResponseLogData{
-		Level:        "INFO",
+		Level:        logLevel,
 		Type:         "RESPONSE",
 		RequestID:    requestMetadata.RequestID,
 		Header:       helpers.ParseHeadersToString(c.Request().Header),

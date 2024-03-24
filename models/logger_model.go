@@ -11,7 +11,7 @@ type RequestLogData struct {
 	Host      string `json:"host"`
 	Method    string `json:"method"`
 	URI       string `json:"uri"`
-	Body      string `json:"request_body"`
+	Body      string `json:"request_body,omitempty"`
 	RemoteIP  string `json:"remote_ip"`
 	BytesIn   int    `json:"bytes_in"`
 }
