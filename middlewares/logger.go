@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo"
+	"github.com/labstack/gommon/log"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
@@ -32,13 +33,14 @@ func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge
 	if err != nil {
 		message := "Failed to write request log : " + err.Error()
 		helpers.WriteErrLog(message)
-		c.Logger().Debug(message)
+		log.Errorf(message)
 		return models.RequestResponseBridge{RequestID: requestID, StartTime: startTime}
 	}
 
 	message := string(stringData)
 	helpers.WriteOutLog(message)
-	c.Logger().Debug(message)
+	log.Info(message)
+
 	return models.RequestResponseBridge{RequestID: requestID, StartTime: startTime}
 }
 
@@ -61,12 +63,21 @@ func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, r
 	if err != nil {
 		message := "Failed to write response log : " + err.Error()
 		helpers.WriteErrLog(message)
-		c.Logger().Debug(message)
+		log.Errorf(message)
 	}
 
 	message := string(stringData)
 	helpers.WriteOutLog(message)
-	c.Logger().Debug(message)
+	if logLevel == "ERROR" {
+		helpers.WriteErrLog(message)
+		log.Errorf(message)
+	} else {
+		log.Info(message)
+	}
+}
+
+func LogErrorCallStack(c echo.Context) {
+
 }
 
 func Logger(c echo.Context, requestBody []byte, responseBody []byte) {
