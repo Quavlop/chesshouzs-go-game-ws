@@ -3,6 +3,9 @@ package helpers
 import (
 	"net/http"
 	"os"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo"
 )
 
 func WriteOutLog(content string) error {
@@ -36,6 +39,13 @@ func ParseHeadersToString(header http.Header) string {
 	}
 
 	return result
+}
+
+func GenerateRequestID(c echo.Context) string {
+	if c.Request().Header.Get("X-Request-ID") != "" {
+		return c.Request().Header.Get("X-Request-ID")
+	}
+	return uuid.NewString()
 }
 
 func MapStatusResponseToLogLevel(status int) string {

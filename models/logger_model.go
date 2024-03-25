@@ -29,6 +29,15 @@ type ResponseLogData struct {
 	BytesOut     int    `json:"bytes_out"`
 }
 
+type LogErrorCallStack struct {
+	Level     string `json:"level"`
+	Type      string `json:"type"`
+	RequestID string `json:"request_id"`
+	Time      string `json:"time"`
+	Message   string `json:"message"`
+	URI       string `json:"uri"`
+}
+
 type RequestResponseBridge struct {
 	RequestID string    `json:"request_id"`
 	StartTime time.Time `json:"time"`

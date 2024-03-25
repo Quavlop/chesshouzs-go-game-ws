@@ -20,6 +20,8 @@ func main() {
 		e.Logger.Fatal(err.Error())
 	}
 
+	// middlewares
+	e.Use(middlewares.SetRequestID)
 	e.Use(middleware.BodyDump(middlewares.Logger))
 
 	postgresConnection := models.SqlConnection{

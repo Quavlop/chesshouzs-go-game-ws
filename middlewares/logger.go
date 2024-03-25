@@ -5,16 +5,23 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo"
 	"github.com/labstack/gommon/log"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
+func SetRequestID(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		requestID := helpers.GenerateRequestID(c)
+		c.Set("request_id", requestID)
+		return next(c)
+	}
+}
+
 func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge {
 	startTime := time.Now()
-	requestID := uuid.NewString()
+	requestID := c.Get("request_id").(string)
 	data := models.RequestLogData{
 		Level:     "INFO",
 		Type:      "REQUEST",
@@ -77,7 +84,11 @@ func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, r
 }
 
 func LogErrorCallStack(c echo.Context) {
-
+	// data := models.LogErrorCallStack{
+	// 	Level: "ERROR",
+	// 	Type:  "INTERNAL",
+	// 	// Reques
+	// }
 }
 
 func Logger(c echo.Context, requestBody []byte, responseBody []byte) {
