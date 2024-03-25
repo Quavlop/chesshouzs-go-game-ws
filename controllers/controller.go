@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo"
-	"github.com/labstack/gommon/log"
 	"ingenhouzs.com/chesshouzs/go-game/interfaces"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 	"ingenhouzs.com/chesshouzs/go-game/repositories"
@@ -29,7 +28,6 @@ func GameRoutes(e *echo.Echo, controller *Controller) {
 	route.GET("", func(c echo.Context) error {
 		_, err := repositories.ConnectPostgreSQL(models.SqlConnection{})
 		if err != nil {
-			log.Errorf("wkwkw")
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
 		return c.JSON(http.StatusOK, "sr")

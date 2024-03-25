@@ -3,6 +3,7 @@ package helpers
 import (
 	"net/http"
 	"os"
+	"runtime"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo"
@@ -53,4 +54,10 @@ func MapStatusResponseToLogLevel(status int) string {
 		return "INFO"
 	}
 	return "ERROR"
+}
+
+func CaptureStackTrace() string {
+	stackBuf := make([]byte, 8192)
+	stackSize := runtime.Stack(stackBuf, false)
+	return string(stackBuf[:stackSize])
 }
