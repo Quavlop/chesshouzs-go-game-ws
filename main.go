@@ -20,7 +20,11 @@ func main() {
 		e.Logger.Fatal(err.Error())
 	}
 
+	// middlewares
+	e.Use(middlewares.SetRequestID)
+	e.Use(middleware.Recover())
 	e.Use(middleware.BodyDump(middlewares.Logger))
+	e.Use(middlewares.PanicLogger)
 
 	postgresConnection := models.SqlConnection{
 		Driver:   os.Getenv("POSTGRES_DB_DRIVER"),
@@ -39,12 +43,12 @@ func main() {
 
 	psql, err := repositories.ConnectPostgreSQL(postgresConnection)
 	if err != nil {
-
+		// e.Logger.Fatal("Failed to connect PostgreSQL : " + err.Error())
 	}
 
 	redis, err := repositories.ConnectRedis(redisConnection)
 	if err != nil {
-
+		// e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
 	repository := repositories.NewRepository(psql, redis)

@@ -3,6 +3,10 @@ package helpers
 import (
 	"net/http"
 	"os"
+	"runtime"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo"
 )
 
 func WriteOutLog(content string) error {
@@ -36,4 +40,24 @@ func ParseHeadersToString(header http.Header) string {
 	}
 
 	return result
+}
+
+func GenerateRequestID(c echo.Context) string {
+	if c.Request().Header.Get("X-Request-ID") != "" {
+		return c.Request().Header.Get("X-Request-ID")
+	}
+	return uuid.NewString()
+}
+
+func MapStatusResponseToLogLevel(status int) string {
+	if status >= 100 && status < 500 {
+		return "INFO"
+	}
+	return "ERROR"
+}
+
+func CaptureStackTrace() string {
+	stackBuf := make([]byte, 8192)
+	stackSize := runtime.Stack(stackBuf, false)
+	return string(stackBuf[:stackSize])
 }
