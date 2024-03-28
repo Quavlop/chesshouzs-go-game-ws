@@ -22,7 +22,9 @@ func main() {
 
 	// middlewares
 	e.Use(middlewares.SetRequestID)
+	e.Use(middleware.Recover())
 	e.Use(middleware.BodyDump(middlewares.Logger))
+	e.Use(middlewares.PanicLogger)
 
 	postgresConnection := models.SqlConnection{
 		Driver:   os.Getenv("POSTGRES_DB_DRIVER"),

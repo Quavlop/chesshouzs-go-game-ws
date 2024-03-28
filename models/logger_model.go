@@ -24,9 +24,10 @@ type ResponseLogData struct {
 	Time         string `json:"time"`
 	URI          string `json:"uri"`
 	Status       int    `json:"status"`
-	Response     string `json:"response"`
-	LatencyHuman string `json:"latency_human"`
-	BytesOut     int    `json:"bytes_out"`
+	Response     string `json:"response,omitempty"`
+	Message      string `json:"message,omitempty"`
+	LatencyHuman string `json:"latency_human,omitempty"`
+	BytesOut     int    `json:"bytes_out,omitempty"`
 }
 
 type LogErrorCallStack struct {

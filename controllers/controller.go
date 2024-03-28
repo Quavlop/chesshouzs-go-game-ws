@@ -28,8 +28,10 @@ func GameRoutes(e *echo.Echo, controller *Controller) {
 	route.GET("", func(c echo.Context) error {
 		_, err := repositories.ConnectPostgreSQL(models.SqlConnection{})
 		if err != nil {
+			panic(err)
 			return c.JSON(http.StatusInternalServerError, err.Error())
 		}
+
 		return c.JSON(http.StatusOK, "sr")
 	})
 	route.POST("", func(c echo.Context) error { return c.JSON(http.StatusInternalServerError, "sssss") })

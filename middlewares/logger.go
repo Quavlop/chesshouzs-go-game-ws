@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"encoding/json"
+	"net/http"
 	"os"
 	"time"
 
@@ -53,6 +54,10 @@ func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge
 
 func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, responseBody []byte) {
 	logLevel := helpers.MapStatusResponseToLogLevel(c.Response().Status)
+	status := c.Response().Status
+	if len(responseBody) <= 0 {
+		status = http.StatusInternalServerError
+	}
 	data := models.ResponseLogData{
 		Level:        logLevel,
 		Type:         "RESPONSE",
@@ -60,7 +65,7 @@ func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, r
 		Header:       helpers.ParseHeadersToString(c.Request().Header),
 		Time:         time.Now().Format(os.Getenv("TIME_FORMAT")),
 		URI:          c.Request().URL.String(),
-		Status:       c.Response().Status,
+		Status:       status,
 		Response:     string(responseBody),
 		LatencyHuman: time.Since(requestMetadata.StartTime).String(),
 		BytesOut:     len(responseBody),
@@ -108,6 +113,12 @@ func LogErrorCallStack(c echo.Context) {
 	log.Errorf(message)
 }
 
+func PanicLogger(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		defer helpers.PanicRecover(c)
+		return next(c)
+	}
+}
 func Logger(c echo.Context, requestBody []byte, responseBody []byte) {
 	data := LogRequest(c, requestBody)
 	if c.Response().Status >= 500 {
