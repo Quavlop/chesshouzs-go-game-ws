@@ -20,7 +20,8 @@ type repository struct {
 func ConnectPostgreSQL(psql models.SqlConnection) (*gorm.DB, error) {
 	var err error
 
-	db, err := gorm.Open(psql.Driver, psql.User+":"+psql.Password+"@"+psql.Host+":"+psql.Port+"/"+psql.Database+"?sslmode=disable")
+	connectionString := "host=" + psql.Host + " user=" + psql.User + " password=" + psql.Password + " dbname=" + psql.Database + " port=" + psql.Port + " sslmode=disable TimeZone=UTC+7"
+	db, err := gorm.Open(psql.Driver, connectionString)
 	if err != nil {
 		return db, err
 	}
