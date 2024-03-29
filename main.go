@@ -43,12 +43,12 @@ func main() {
 
 	psql, err := repositories.ConnectPostgreSQL(postgresConnection)
 	if err != nil {
-		// e.Logger.Fatal("Failed to connect PostgreSQL : " + err.Error())
+		e.Logger.Fatal("Failed to connect PostgreSQL : " + err.Error())
 	}
 
 	redis, err := repositories.ConnectRedis(redisConnection)
 	if err != nil {
-		// e.Logger.Fatal("Failed to connect Redis : " + err.Error())
+		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
 	repository := repositories.NewRepository(psql, redis)
