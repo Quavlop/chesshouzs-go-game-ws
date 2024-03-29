@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo"
+	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/interfaces"
 	"ingenhouzs.com/chesshouzs/go-game/models"
-	"ingenhouzs.com/chesshouzs/go-game/repositories"
 )
 
 type Controller struct {
@@ -26,15 +26,6 @@ func GameRoutes(e *echo.Echo, controller *Controller) {
 	route := e.Group("/")
 
 	route.GET("", func(c echo.Context) error {
-		_, err := repositories.ConnectPostgreSQL(models.SqlConnection{})
-		if err != nil {
-			panic(err)
-			return c.JSON(http.StatusInternalServerError, err.Error())
-		}
-
-		return c.JSON(http.StatusOK, "sr")
+		return helpers.HttpResponse(c, http.StatusOK, "WKWK", models.Response{Status: 2})
 	})
-	route.POST("", func(c echo.Context) error { return c.JSON(http.StatusInternalServerError, "sssss") })
-	// route.POST("", func(c echo.Context) error { return errors.New("ERROR TEST") })
-
 }
