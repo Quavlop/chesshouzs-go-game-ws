@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"ingenhouzs.com/chesshouzs/go-game/config/websocket"
 	"ingenhouzs.com/chesshouzs/go-game/controllers"
 	"ingenhouzs.com/chesshouzs/go-game/middlewares"
 	"ingenhouzs.com/chesshouzs/go-game/models"
@@ -51,9 +52,13 @@ func main() {
 		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
+	wsConnections := make([]*websocket.WebSocketClientConnection, 0)
+
 	repository := repositories.NewRepository(psql, redis)
-	service := services.NewService(repository)
-	controllers.NewController(e, service)
+	httpService := services.NewHttpService(repository)
+	websocketService := services.NewWebSocketService(repository)
+	controllers.NewController(e, httpService)
+	websocket.NewWebSocketHandler(e, websocketService, wsConnections)
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
 }

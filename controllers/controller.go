@@ -10,10 +10,10 @@ import (
 )
 
 type Controller struct {
-	Service interfaces.Service
+	Service interfaces.HttpService
 }
 
-func NewController(e *echo.Echo, service interfaces.Service) {
+func NewController(e *echo.Echo, service interfaces.HttpService) {
 	controller := &Controller{
 		Service: service,
 	}

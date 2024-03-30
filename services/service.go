@@ -6,6 +6,10 @@ type service struct {
 	repository interfaces.Repository
 }
 
-func NewService(repository interfaces.Repository) interfaces.Service {
+func NewHttpService(repository interfaces.Repository) interfaces.HttpService {
+	return &service{repository}
+}
+
+func NewWebSocketService(repository interfaces.Repository) interfaces.WebsocketService {
 	return &service{repository}
 }
