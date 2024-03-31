@@ -2,14 +2,18 @@ package services
 
 import "ingenhouzs.com/chesshouzs/go-game/interfaces"
 
-type service struct {
+type httpService struct {
+	repository interfaces.Repository
+}
+
+type webSocketService struct {
 	repository interfaces.Repository
 }
 
 func NewHttpService(repository interfaces.Repository) interfaces.HttpService {
-	return &service{repository}
+	return &httpService{repository}
 }
 
 func NewWebSocketService(repository interfaces.Repository) interfaces.WebsocketService {
-	return &service{repository}
+	return &webSocketService{repository}
 }
