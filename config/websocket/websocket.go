@@ -95,10 +95,14 @@ func terminateConnection(conn *ws.Conn, connectionList []*WebSocketClientConnect
 	return connectionList
 }
 
-func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connectionList []*WebSocketClientConnection, event string) {
+func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connectionList []*WebSocketClientConnection, event string) (models.WebSocketResponse, error) {
 	var eventHandler map[string]func(channel models.WebSocketChannel) (models.WebSocketResponse, error) = map[string]func(channel models.WebSocketChannel) (models.WebSocketResponse, error){
 		constants.WS_EVENT_INIT_MATCHMAKING: service.HandleMatchmaking,
 	}
 
-	eventHandler[event](models.WebSocketChannel{})
+	response, err := eventHandler[event](models.WebSocketChannel{})
+	if err != nil {
+
+	}
+	return response, err
 }
