@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"errors"
 	"log"
 	"os"
 	"time"
@@ -18,22 +19,12 @@ var upgrader = ws.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type wsHandler struct {
-	conn    *ws.Conn
-	service interfaces.WebsocketService
-}
-
-type WebSocketClientConnection struct {
-	Token      string
-	Connection *ws.Conn
-}
-
 type WebSocketClientMessage struct {
 	Event string      `json:"event"`
 	Data  interface{} `json:"data"`
 }
 
-func initConnection(c echo.Context, connectionList []*WebSocketClientConnection) (*ws.Conn, error) {
+func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, error) {
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		log.Println(err)
@@ -41,33 +32,32 @@ func initConnection(c echo.Context, connectionList []*WebSocketClientConnection)
 	}
 
 	token := c.QueryParams().Get("sid")
-	connectionList = append(connectionList, &WebSocketClientConnection{
-		Token:      token,
-		Connection: conn,
-	})
+	connectionList.addConnection(token, conn)
+
 	helpers.WriteOutLog("[WEBSOCKET] CONNECTION ESTABLISHED : \"" + c.Request().RemoteAddr + " | " + c.Request().Host + " | " + time.Now().Format(os.Getenv("TIME_FORMAT")) + "\"")
 	return conn, nil
 }
 
-func NewWebSocketHandler(e *echo.Echo, service interfaces.WebsocketService, connectionList []*WebSocketClientConnection) {
+func NewWebSocketHandler(e *echo.Echo, service interfaces.WebsocketService, connectionList *Connections, gameRoomList map[string]*models.GameRoom) {
 	e.GET("/ws", func(c echo.Context) error {
 		conn, err := initConnection(c, connectionList)
 		if err != nil {
 			return err
 		}
 		defer conn.Close()
-		return handleIO(service, conn, connectionList)
+		return handleIO(c, service, conn, connectionList)
 	})
 }
 
-func handleIO(service interfaces.WebsocketService, conn *ws.Conn, connectionList []*WebSocketClientConnection) error {
+func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn, connectionList *Connections) error {
 
 	for {
 
 		var message WebSocketClientMessage
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			terminateConnection(conn, connectionList)
+			token := c.QueryParams().Get("sid")
+			connectionList.deleteConnection(token, conn)
 			break
 		}
 
@@ -75,9 +65,7 @@ func handleIO(service interfaces.WebsocketService, conn *ws.Conn, connectionList
 			continue
 		}
 		response, err := handleEvents(service, conn, connectionList, message.Event)
-		if err != nil {
-			return nil
-		}
+
 		err = conn.WriteJSON(response)
 		if err != nil {
 			log.Println(err)
@@ -87,24 +75,22 @@ func handleIO(service interfaces.WebsocketService, conn *ws.Conn, connectionList
 	return nil
 }
 
-func terminateConnection(conn *ws.Conn, connectionList []*WebSocketClientConnection) []*WebSocketClientConnection {
-	for idx, connection := range connectionList {
-		if connection.Connection == conn {
-			connectionList := append(connectionList[:idx], connectionList[idx+1:]...)
-			return connectionList
-		}
-	}
-	return connectionList
-}
-
-func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connectionList []*WebSocketClientConnection, event string) (models.WebSocketResponse, error) {
+func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connectionList *Connections, event string) (models.WebSocketResponse, error) {
 	var eventHandler map[string]func(channel models.WebSocketChannel) (models.WebSocketResponse, error) = map[string]func(channel models.WebSocketChannel) (models.WebSocketResponse, error){
 		constants.WS_EVENT_INIT_MATCHMAKING: service.HandleMatchmaking,
 	}
 
-	response, err := eventHandler[event](models.WebSocketChannel{})
+	handler, eventExists := eventHandler[event]
+	if !eventExists {
+		errMessage := "[ERROR] : 404 - Unrecognizable Event"
+		return models.WebSocketResponse{
+			Status: constants.WS_SERVER_RESPONSE_ERROR,
+			Data:   errMessage,
+		}, errors.New(errMessage)
+	}
+	response, err := handler(models.WebSocketChannel{})
 	if err != nil {
 		return response, err
 	}
-	return response, err
+	return response, nil
 }

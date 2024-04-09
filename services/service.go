@@ -10,6 +10,10 @@ type webSocketService struct {
 	repository interfaces.Repository
 }
 
+type gameRoomService struct {
+	room interfaces.WebSocketRoom
+}
+
 func NewHttpService(repository interfaces.Repository) interfaces.HttpService {
 	return &httpService{repository}
 }

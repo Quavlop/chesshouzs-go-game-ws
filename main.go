@@ -52,13 +52,22 @@ func main() {
 		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
-	wsConnections := make([]*websocket.WebSocketClientConnection, 0)
+	// individual connection per client
+	// key : user's session token
+	// value : client connection metadata
+	wsConnections := &websocket.Connections{}
+
+	// rooms connection
+	// key : room_id
+	// value : room_object consisting room_id and client list (map)
+	wsGameRooms := make(map[string]*models.GameRoom)
+	wsConnections.Init()
 
 	repository := repositories.NewRepository(psql, redis)
 	httpService := services.NewHttpService(repository)
 	websocketService := services.NewWebSocketService(repository)
 	controllers.NewController(e, httpService)
-	websocket.NewWebSocketHandler(e, websocketService, wsConnections)
+	websocket.NewWebSocketHandler(e, websocketService, wsConnections, wsGameRooms)
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
 }
