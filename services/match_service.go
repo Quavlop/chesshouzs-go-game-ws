@@ -6,5 +6,7 @@ import (
 
 // Websocket services
 func (s *webSocketService) HandleMatchmaking(channel models.WebSocketChannel) (models.WebSocketResponse, error) {
-	return models.WebSocketResponse{}, nil
+	return models.WebSocketResponse{
+		Source: "WKKWKWKKWKW",
+	}, nil
 }

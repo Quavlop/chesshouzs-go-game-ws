@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/gorilla/websocket"
 	ws "github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
@@ -64,14 +63,9 @@ func NewWebSocketHandler(e *echo.Echo, service interfaces.WebsocketService, conn
 func handleIO(service interfaces.WebsocketService, conn *ws.Conn, connectionList []*WebSocketClientConnection) error {
 
 	for {
-		err := conn.WriteMessage(websocket.TextMessage, []byte("Hello, Client!"))
-		if err != nil {
-			log.Println(err)
-			continue
-		}
 
 		var message WebSocketClientMessage
-		err = conn.ReadJSON(&message)
+		err := conn.ReadJSON(&message)
 		if err != nil {
 			terminateConnection(conn, connectionList)
 			break
@@ -80,7 +74,15 @@ func handleIO(service interfaces.WebsocketService, conn *ws.Conn, connectionList
 		if message.Event == "" {
 			continue
 		}
-		handleEvents(service, conn, connectionList, message.Event)
+		response, err := handleEvents(service, conn, connectionList, message.Event)
+		if err != nil {
+			return nil
+		}
+		err = conn.WriteJSON(response)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 	}
 	return nil
 }
@@ -102,7 +104,7 @@ func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connection
 
 	response, err := eventHandler[event](models.WebSocketChannel{})
 	if err != nil {
-
+		return response, err
 	}
 	return response, err
 }

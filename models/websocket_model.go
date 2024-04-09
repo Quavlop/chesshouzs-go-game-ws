@@ -9,7 +9,7 @@ type WebSocketChannel struct {
 }
 
 type WebSocketResponse struct {
-	Source string
-	Event  string
-	Data   string
+	Source string `json:"source"`
+	Event  string `json:"event"`
+	Data   string `json:"data"`
 }

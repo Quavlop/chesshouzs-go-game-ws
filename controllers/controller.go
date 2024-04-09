@@ -18,14 +18,14 @@ func NewController(e *echo.Echo, service interfaces.HttpService) {
 		Service: service,
 	}
 
-	GameRoutes(e, controller)
+	WebsocketRoutes(e, controller)
 
 }
 
-func GameRoutes(e *echo.Echo, controller *Controller) {
+func WebsocketRoutes(e *echo.Echo, controller *Controller) {
 	route := e.Group("/")
 
 	route.GET("", func(c echo.Context) error {
-		return helpers.HttpResponse(c, http.StatusOK, "WKWK", models.Response{Status: 2})
+		return helpers.HttpResponse(c, http.StatusOK, "WKWKsssssssss", models.Response{Status: 2})
 	})
 }
