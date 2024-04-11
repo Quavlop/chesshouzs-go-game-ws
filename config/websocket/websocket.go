@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"errors"
 	"log"
 	"os"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/labstack/echo"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
+	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/interfaces"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
@@ -78,14 +78,14 @@ func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, token stri
 
 	handler, eventExists := eventHandler[event]
 	if !eventExists {
-		errMessage := "[ERROR] : 404 - Unrecognizable Event"
+		err := errs.WS_EVENT_NOT_FOUND
 		return models.WebSocketResponse{
 			Status: constants.WS_SERVER_RESPONSE_ERROR,
-			Data:   errMessage,
-		}, errors.New(errMessage)
+			Data:   err.Error(),
+		}, err
 	}
 
-	// handler() contains the connection data which belongs to the request initiator.
+	// handler()'s argument contains the connection data which belongs to the request initiator.
 	response, err := handler(models.WebSocketClientConnection{
 		Connection: conn,
 		Token:      token,

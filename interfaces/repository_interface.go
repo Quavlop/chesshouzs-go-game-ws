@@ -1,3 +1,9 @@
 package interfaces
 
-type Repository interface{}
+type Repository interface {
+	GameRepository
+}
+
+type GameRepository interface {
+	GetUnderMatchmakingPlayers() string
+}
