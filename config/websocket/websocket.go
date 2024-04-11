@@ -19,11 +19,6 @@ var upgrader = ws.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type WebSocketClientMessage struct {
-	Event string      `json:"event"`
-	Data  interface{} `json:"data"`
-}
-
 func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, error) {
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -45,15 +40,16 @@ func NewWebSocketHandler(e *echo.Echo, service interfaces.WebsocketService, conn
 			return err
 		}
 		defer conn.Close()
-		return handleIO(c, service, conn, connectionList)
+		token := c.QueryParams().Get("sid")
+		return handleIO(c, service, conn, token, connectionList)
 	})
 }
 
-func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn, connectionList *Connections) error {
+func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn, token string, connectionList *Connections) error {
 
 	for {
 
-		var message WebSocketClientMessage
+		var message models.WebSocketClientMessage
 		err := conn.ReadJSON(&message)
 		if err != nil {
 			token := c.QueryParams().Get("sid")
@@ -64,7 +60,7 @@ func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn
 		if message.Event == "" {
 			continue
 		}
-		response, err := handleEvents(service, conn, connectionList, message.Event)
+		response, err := handleEvents(service, conn, token, connectionList, message.Event)
 
 		err = conn.WriteJSON(response)
 		if err != nil {
@@ -75,8 +71,8 @@ func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn
 	return nil
 }
 
-func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connectionList *Connections, event string) (models.WebSocketResponse, error) {
-	var eventHandler map[string]func(channel models.WebSocketChannel) (models.WebSocketResponse, error) = map[string]func(channel models.WebSocketChannel) (models.WebSocketResponse, error){
+func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, token string, connectionList *Connections, event string) (models.WebSocketResponse, error) {
+	var eventHandler map[string]func(models.WebSocketClientConnection) (models.WebSocketResponse, error) = map[string]func(models.WebSocketClientConnection) (models.WebSocketResponse, error){
 		constants.WS_EVENT_INIT_MATCHMAKING: service.HandleMatchmaking,
 	}
 
@@ -88,7 +84,12 @@ func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, connection
 			Data:   errMessage,
 		}, errors.New(errMessage)
 	}
-	response, err := handler(models.WebSocketChannel{})
+
+	// handler() contains the connection data which belongs to the request initiator.
+	response, err := handler(models.WebSocketClientConnection{
+		Connection: conn,
+		Token:      token,
+	})
 	if err != nil {
 		return response, err
 	}

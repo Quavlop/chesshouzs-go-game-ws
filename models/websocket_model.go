@@ -6,26 +6,24 @@ import (
 
 type WebSocketClientConnection struct {
 	Connection *websocket.Conn
+	Token      string
+}
+
+type WebSocketClientMessage struct {
+	Event string      `json:"event"`
+	Data  interface{} `json:"data"`
 }
 
 type WebSocketChannel struct {
-	source *websocket.Conn
-	target *websocket.Conn
-	Data   interface{}
-}
-
-func (wsChan WebSocketChannel) GetSource() *websocket.Conn {
-	return wsChan.source
-}
-
-func (wsChan WebSocketChannel) GetTarget() *websocket.Conn {
-	return wsChan.target
+	Source       string
+	TargetClient string
+	TargetRoom   string
+	Event        string
+	Data         interface{}
 }
 
 type WebSocketResponse struct {
 	Status string      `json:"status,omitempty"`
-	Source string      `json:"source,omitempty"`
-	Target string      `json:"target,omitempty"`
 	Event  string      `json:"event,omitempty"`
 	Data   interface{} `json:"data"`
 }

@@ -65,7 +65,7 @@ func main() {
 
 	repository := repositories.NewRepository(psql, redis)
 	httpService := services.NewHttpService(repository)
-	websocketService := services.NewWebSocketService(repository)
+	websocketService := services.NewWebSocketService(repository, wsConnections)
 	controllers.NewController(e, httpService)
 	websocket.NewWebSocketHandler(e, websocketService, wsConnections, wsGameRooms)
 

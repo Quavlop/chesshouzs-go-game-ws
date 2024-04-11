@@ -6,9 +6,13 @@ import (
 )
 
 // Websocket services
-func (s *webSocketService) HandleMatchmaking(channel models.WebSocketChannel) (models.WebSocketResponse, error) {
+func (s *webSocketService) HandleMatchmaking(conn models.WebSocketClientConnection) (models.WebSocketResponse, error) {
+	s.wsConnections.EmitGlobalBroadcast(models.WebSocketChannel{
+		Source: conn.Token,
+		Event:  "MATCH",
+		Data:   "123",
+	})
 	return models.WebSocketResponse{
 		Status: constants.WS_SERVER_RESPONSE_SUCCESS,
-		Source: "WKKWKWKKWKW",
 	}, nil
 }
