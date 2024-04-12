@@ -1,18 +1,29 @@
 package services
 
 import (
-	"ingenhouzs.com/chesshouzs/go-game/constants"
+	"errors"
+
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
 // Websocket services
-func (s *webSocketService) HandleMatchmaking(conn models.WebSocketClientConnection) (models.WebSocketResponse, error) {
-	// s.wsConnections.EmitGlobalBroadcast(models.WebSocketChannel{
-	// 	Source: conn.Token,
-	// 	Event:  "MATCH",
-	// 	Data:   "BROADCASTEEEEDDDDDDDDD FROM " + conn.Token,
+func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, params models.HandleMatchmakingParams) (models.HandleMatchmakingResponse, error) {
+
+	// playerPool, err := s.repository.GetUnderMatchmakingPlayers(models.PoolParams{
+	// 	Type:        params.Type,
+	// 	TimeControl: params.TimeControl,
 	// })
-	return models.WebSocketResponse{
-		Status: constants.WS_SERVER_RESPONSE_SUCCESS,
-	}, nil
+	// if err != nil {
+	// 	return models.WebSocketResponse{
+	// 		Status: constants.WS_SERVER_RESPONSE_ERROR,
+	// 		Event:  "MM",
+	// 		Data:   "WKWWKKW",
+	// 	}, nil
+	// }
+
+	// LOGGER level callstack
+	// MAKE ALL LOGGING AS MIDDLEWARE FORMAT
+	return models.HandleMatchmakingResponse{
+		ID: "1",
+	}, errors.New("KKWK")
 }

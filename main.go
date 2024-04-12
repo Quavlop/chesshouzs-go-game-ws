@@ -66,8 +66,8 @@ func main() {
 	repository := repositories.NewRepository(psql, redis)
 	httpService := services.NewHttpService(repository)
 	websocketService := services.NewWebSocketService(repository, wsConnections)
-	controllers.NewController(e, httpService)
-	websocket.NewWebSocketHandler(e, websocketService, wsConnections, wsGameRooms)
+	controller := controllers.NewController(e, httpService, websocketService)
+	websocket.NewWebSocketHandler(e, controller, wsConnections, wsGameRooms)
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
 }

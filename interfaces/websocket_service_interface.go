@@ -3,5 +3,5 @@ package interfaces
 import "ingenhouzs.com/chesshouzs/go-game/models"
 
 type WebsocketService interface {
-	HandleMatchmaking(conn models.WebSocketClientConnection) (models.WebSocketResponse, error)
+	HandleMatchmaking(client models.WebSocketClientData, params models.HandleMatchmakingParams) (models.HandleMatchmakingResponse, error)
 }

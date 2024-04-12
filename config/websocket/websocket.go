@@ -8,9 +8,9 @@ import (
 	ws "github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
+	"ingenhouzs.com/chesshouzs/go-game/controllers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
-	"ingenhouzs.com/chesshouzs/go-game/interfaces"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
@@ -23,6 +23,8 @@ func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, erro
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		log.Println(err)
+		helpers.WriteOutLog(err.Error())
+		helpers.WriteErrLog(err.Error())
 		return conn, err
 	}
 
@@ -33,19 +35,20 @@ func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, erro
 	return conn, nil
 }
 
-func NewWebSocketHandler(e *echo.Echo, service interfaces.WebsocketService, connectionList *Connections, gameRoomList map[string]*models.GameRoom) {
+func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, connectionList *Connections, gameRoomList map[string]*models.GameRoom) {
 	e.GET("/ws", func(c echo.Context) error {
 		conn, err := initConnection(c, connectionList)
 		if err != nil {
+			helpers.WriteOutLog("[WEBSOCKET] FAILED TO INITIALIZE CONNECTION : " + err.Error())
 			return err
 		}
 		defer conn.Close()
 		token := c.QueryParams().Get("sid")
-		return handleIO(c, service, conn, token, connectionList)
+		return handleIO(c, controller, conn, token, connectionList)
 	})
 }
 
-func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn, token string, connectionList *Connections) error {
+func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn, token string, connectionList *Connections) error {
 
 	for {
 
@@ -54,29 +57,31 @@ func handleIO(c echo.Context, service interfaces.WebsocketService, conn *ws.Conn
 		if err != nil {
 			token := c.QueryParams().Get("sid")
 			connectionList.deleteConnection(token, conn)
+			helpers.WriteOutLog("[WEBSOCKET] Failed to read message : " + err.Error())
 			break
 		}
-
 		if message.Event == "" {
 			continue
 		}
-		response, err := handleEvents(service, conn, token, connectionList, message.Event)
+		response, err := handleEvents(c, controller, conn, token, connectionList, message)
 
 		err = conn.WriteJSON(response)
 		if err != nil {
 			log.Println(err)
+			helpers.WriteOutLog("[WEBSOCKET] Failed to send response : " + err.Error())
 			continue
 		}
 	}
 	return nil
 }
 
-func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, token string, connectionList *Connections, event string) (models.WebSocketResponse, error) {
-	var eventHandler map[string]func(models.WebSocketClientConnection) (models.WebSocketResponse, error) = map[string]func(models.WebSocketClientConnection) (models.WebSocketResponse, error){
-		constants.WS_EVENT_INIT_MATCHMAKING: service.HandleMatchmaking,
+func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.Conn, token string, connectionList *Connections, message models.WebSocketClientMessage) (models.WebSocketResponse, error) {
+	var response models.WebSocketResponse
+	var eventHandler = map[string]func(models.WebSocketClientData) (models.WebSocketResponse, error){
+		constants.WS_EVENT_INIT_MATCHMAKING: controller.HandleMatchmaking,
 	}
 
-	handler, eventExists := eventHandler[event]
+	handler, eventExists := eventHandler[message.Event]
 	if !eventExists {
 		err := errs.WS_EVENT_NOT_FOUND
 		return models.WebSocketResponse{
@@ -86,11 +91,14 @@ func handleEvents(service interfaces.WebsocketService, conn *ws.Conn, token stri
 	}
 
 	// handler()'s argument contains the connection data which belongs to the request initiator.
-	response, err := handler(models.WebSocketClientConnection{
+	response, err := handler(models.WebSocketClientData{
 		Connection: conn,
 		Token:      token,
+		Event:      message.Event,
+		Data:       message.Data,
 	})
 	if err != nil {
+		helpers.WriteOutLog("[WEBSOCKET] Failed action :  " + err.Error())
 		return response, err
 	}
 	return response, nil

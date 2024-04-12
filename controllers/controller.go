@@ -10,15 +10,18 @@ import (
 )
 
 type Controller struct {
-	Service interfaces.HttpService
+	HttpService      interfaces.HttpService
+	WebSocketService interfaces.WebsocketService
 }
 
-func NewController(e *echo.Echo, service interfaces.HttpService) {
+func NewController(e *echo.Echo, httpService interfaces.HttpService, webSocketService interfaces.WebsocketService) *Controller {
 	controller := &Controller{
-		Service: service,
+		HttpService:      httpService,
+		WebSocketService: webSocketService,
 	}
 
 	WebsocketRoutes(e, controller)
+	return controller
 
 }
 

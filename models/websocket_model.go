@@ -9,6 +9,13 @@ type WebSocketClientConnection struct {
 	Token      string
 }
 
+type WebSocketClientData struct {
+	Connection *websocket.Conn
+	Token      string
+	Event      string
+	Data       interface{}
+}
+
 type WebSocketClientMessage struct {
 	Event string      `json:"event"`
 	Data  interface{} `json:"data"`
