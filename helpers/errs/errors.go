@@ -7,3 +7,7 @@ var (
 	WS_ROOM_NOT_FOUND              = errors.New("Websocket room not found.")
 	WS_EVENT_NOT_FOUND             = errors.New("Event not found.")
 )
+
+var (
+	ERR_NO_AVAILABLE_PLAYERS = errors.New("No available players currently.")
+)
