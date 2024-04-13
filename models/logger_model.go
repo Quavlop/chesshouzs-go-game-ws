@@ -33,6 +33,7 @@ type ResponseLogData struct {
 type LogErrorCallStack struct {
 	Level     string `json:"level"`
 	Type      string `json:"type"`
+	Event     string `json:"event,omitempty"`
 	RequestID string `json:"request_id"`
 	Time      string `json:"time"`
 	Message   string `json:"message"`

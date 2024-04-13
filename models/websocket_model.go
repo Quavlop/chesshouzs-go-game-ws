@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/gorilla/websocket"
+	"github.com/labstack/echo"
 )
 
 type WebSocketClientConnection struct {
@@ -13,6 +14,7 @@ type WebSocketClientData struct {
 	Connection *websocket.Conn
 	Token      string
 	Event      string
+	Context    *echo.Context
 	Data       interface{}
 }
 

@@ -1,8 +1,6 @@
 package services
 
 import (
-	"errors"
-
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
@@ -21,9 +19,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	// 	}, nil
 	// }
 
-	// LOGGER level callstack
-	// MAKE ALL LOGGING AS MIDDLEWARE FORMAT
 	return models.HandleMatchmakingResponse{
 		ID: "1",
-	}, errors.New("KKWK")
+	}, nil
 }

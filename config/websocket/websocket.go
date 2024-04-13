@@ -90,15 +90,17 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 		}, err
 	}
 
+	c.Set("ws-event", message.Event)
+
 	// handler()'s argument contains the connection data which belongs to the request initiator.
 	response, err := handler(models.WebSocketClientData{
 		Connection: conn,
 		Token:      token,
 		Event:      message.Event,
+		Context:    &c,
 		Data:       message.Data,
 	})
 	if err != nil {
-		helpers.WriteOutLog("[WEBSOCKET] Failed action :  " + err.Error())
 		return response, err
 	}
 	return response, nil
