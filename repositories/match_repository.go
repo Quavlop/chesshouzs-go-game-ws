@@ -9,7 +9,7 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
-func (r *repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]models.PlayerPool, error) {
+func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]models.PlayerPool, error) {
 	var data []models.PlayerPool
 	key := helpers.GetPoolKey(params)
 

@@ -55,17 +55,26 @@ func main() {
 	// individual connection per client
 	// key : user's session token
 	// value : client connection metadata
-	wsConnections := &websocket.Connections{}
+	wsConnections := &websocket.Connections{} // TODO -> get user list from db
 
 	// rooms connection
 	// key : room_id
 	// value : room_object consisting room_id and client list (map)
-	wsGameRooms := make(map[string]*models.GameRoom)
+	wsGameRooms := make(map[string]*models.GameRoom) // TODO -> get room list from db
 	wsConnections.Init()
 
 	repository := repositories.NewRepository(psql, redis)
-	httpService := services.NewHttpService(repository)
-	websocketService := services.NewWebSocketService(repository, wsConnections)
+
+	// auth middleware
+	e.Use(middlewares.Auth(repository))
+
+	httpService := services.NewHttpService(repository, services.BaseService{})
+	websocketService := services.NewWebSocketService(repository, wsConnections, services.BaseService{})
+
+	baseService := services.NewBaseService(websocketService, httpService)
+	baseService.WebSocketService = websocketService
+	baseService.HttpService = httpService
+
 	controller := controllers.NewController(e, httpService, websocketService)
 	websocket.NewWebSocketHandler(e, controller, wsConnections, wsGameRooms)
 

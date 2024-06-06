@@ -75,7 +75,7 @@ func LogErrorCallStack(c echo.Context, err error) {
 		errMessage = CaptureStackTrace()
 	}
 
-	event := c.Get("ws-event").(string)
+	event, _ := c.Get("ws-event").(string)
 
 	if event != "" {
 		data = models.LogErrorCallStack{

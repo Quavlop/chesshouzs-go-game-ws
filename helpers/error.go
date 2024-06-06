@@ -37,6 +37,5 @@ func PanicRecover(c echo.Context) {
 		message := string(stringData)
 		WriteOutLog(message)
 		WriteErrLog(message)
-		log.Errorf("Panic error:", r)
 	}
 }

@@ -55,7 +55,7 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 		var message models.WebSocketClientMessage
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			token := c.QueryParams().Get("sid")
+			token := c.Get("user").(models.User).ID.String()
 			connectionList.deleteConnection(token, conn)
 			helpers.WriteOutLog("[WEBSOCKET] Failed to read message : " + err.Error())
 			break
@@ -64,6 +64,11 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 			continue
 		}
 		response, err := handleEvents(c, controller, conn, token, connectionList, message)
+		if err != nil {
+			log.Println(err)
+			helpers.WriteOutLog("[WEBSOCKET] Failed to handle event (request) : " + err.Error())
+			continue
+		}
 
 		err = conn.WriteJSON(response)
 		if err != nil {
@@ -98,6 +103,7 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 		Token:      token,
 		Event:      message.Event,
 		Context:    &c,
+		User:       c.Get("user").(models.User),
 		Data:       message.Data,
 	})
 	if err != nil {

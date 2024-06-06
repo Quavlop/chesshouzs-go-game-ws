@@ -15,6 +15,7 @@ type WebSocketClientData struct {
 	Token      string
 	Event      string
 	Context    *echo.Context
+	User       User
 	Data       interface{}
 }
 
