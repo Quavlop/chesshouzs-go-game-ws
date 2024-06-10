@@ -11,13 +11,13 @@ type BaseService struct {
 }
 type httpService struct {
 	repository  interfaces.Repository
-	baseService BaseService
+	BaseService *BaseService
 }
 
 type webSocketService struct {
 	repository    interfaces.Repository
 	wsConnections *websocket.Connections
-	baseService   BaseService
+	BaseService   *BaseService
 }
 
 type gameRoomService struct {
@@ -28,10 +28,10 @@ func NewBaseService(webSocketService interfaces.WebsocketService, httpService in
 	return &BaseService{WebSocketService: webSocketService, HttpService: httpService}
 }
 
-func NewHttpService(repository interfaces.Repository, baseService BaseService) interfaces.HttpService {
+func NewHttpService(repository interfaces.Repository, baseService *BaseService) interfaces.HttpService {
 	return &httpService{repository, baseService}
 }
 
-func NewWebSocketService(repository interfaces.Repository, wsConnections *websocket.Connections, baseService BaseService) interfaces.WebsocketService {
+func NewWebSocketService(repository interfaces.Repository, wsConnections *websocket.Connections, baseService *BaseService) interfaces.WebsocketService {
 	return &webSocketService{repository, wsConnections, baseService}
 }

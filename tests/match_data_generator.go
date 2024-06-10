@@ -21,20 +21,28 @@ func GeneratePlayerPool() []models.PlayerPool {
 	}
 	return []models.PlayerPool{
 		{
-			EloPoints: 800,
-			JoinTime:  baseTime.Add(3 * time.Minute),
+			User: models.User{
+				EloPoints: 800,
+			},
+			JoinTime: baseTime.Add(3 * time.Minute),
 		},
 		{
-			EloPoints: 840,
-			JoinTime:  baseTime.Add(2 * time.Minute),
+			User: models.User{
+				EloPoints: 840,
+			},
+			JoinTime: baseTime.Add(2 * time.Minute),
 		},
 		{
-			EloPoints: 800,
-			JoinTime:  baseTime.Add(4 * time.Minute),
+			User: models.User{
+				EloPoints: 800,
+			},
+			JoinTime: baseTime.Add(4 * time.Minute),
 		},
 		{
-			EloPoints: 700,
-			JoinTime:  baseTime.Add(5 * time.Minute),
+			User: models.User{
+				EloPoints: 700,
+			},
+			JoinTime: baseTime.Add(5 * time.Minute),
 		},
 	}
 }

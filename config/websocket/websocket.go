@@ -65,15 +65,15 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 		}
 		response, err := handleEvents(c, controller, conn, token, connectionList, message)
 		if err != nil {
-			log.Println(err)
-			helpers.WriteOutLog("[WEBSOCKET] Failed to handle event (request) : " + err.Error())
+			helpers.LogErrorCallStack(c, err)
+			helpers.WriteOutLog("[WEBSOCKET] Error response : " + err.Error())
 			continue
 		}
 
 		err = conn.WriteJSON(response)
 		if err != nil {
-			log.Println(err)
-			helpers.WriteOutLog("[WEBSOCKET] Failed to send response : " + err.Error())
+			helpers.LogErrorCallStack(c, err)
+			helpers.WriteErrLog("[WEBSOCKET] Failed to send response : " + err.Error())
 			continue
 		}
 	}

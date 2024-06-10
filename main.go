@@ -14,6 +14,8 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/services"
 )
 
+var wsConnections *websocket.Connections
+
 func main() {
 	e := echo.New()
 
@@ -55,7 +57,7 @@ func main() {
 	// individual connection per client
 	// key : user's session token
 	// value : client connection metadata
-	wsConnections := &websocket.Connections{} // TODO -> get user list from db
+	wsConnections = &websocket.Connections{} // TODO -> get user list from db
 
 	// rooms connection
 	// key : room_id
@@ -68,12 +70,15 @@ func main() {
 	// auth middleware
 	e.Use(middlewares.Auth(repository))
 
-	httpService := services.NewHttpService(repository, services.BaseService{})
-	websocketService := services.NewWebSocketService(repository, wsConnections, services.BaseService{})
+	httpService := services.NewHttpService(repository, &services.BaseService{})
+	websocketService := services.NewWebSocketService(repository, wsConnections, &services.BaseService{})
 
 	baseService := services.NewBaseService(websocketService, httpService)
 	baseService.WebSocketService = websocketService
 	baseService.HttpService = httpService
+
+	httpService = services.NewHttpService(repository, baseService)
+	websocketService = services.NewWebSocketService(repository, wsConnections, baseService)
 
 	controller := controllers.NewController(e, httpService, websocketService)
 	websocket.NewWebSocketHandler(e, controller, wsConnections, wsGameRooms)

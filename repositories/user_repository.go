@@ -17,7 +17,7 @@ func (r *Repository) GetUserDataByID(id string) (models.User, error) {
 		return user, result.Error
 	}
 
-	if result.RowsAffected == 0 {
+	if result.RecordNotFound() {
 		return user, errors.New("user data not found")
 	}
 

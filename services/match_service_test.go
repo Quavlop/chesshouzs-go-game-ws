@@ -37,16 +37,16 @@ func TestFilterEligibleOpponent(t *testing.T) {
 		mockWebSocketService := mocks.NewMockWebsocketService(ctrl)
 
 		params := make(map[string]interface{})
+		params["user"] = tests.GenerateUserStub()
 		params["filter_eligible_opponent_params"] = models.FilterEligibleOpponentParams{
 			Filter: models.PoolParams{
 				Type:        constants.GAME_RAPID_TYPE,
-				TimeControl: constants.GAME_1_0_1_TIME_CONTROL,
+				TimeControl: constants.GAME_60_1_TIME_CONTROL,
 			},
 			Client: models.PlayerPool{
-				EloPoints: client.Data.(models.Player).EloPoints,
+				User: params["user"].(models.User),
 			},
 		}
-
 		test := tests.Test{
 			Fields: tests.Fields{
 				Repository: mockRepository,
@@ -60,6 +60,12 @@ func TestFilterEligibleOpponent(t *testing.T) {
 				ExpectErr: false,
 			},
 		}
+
+		mockRepository.
+			EXPECT().
+			GetUserDataByID(gomock.Any()).
+			Return(params["user"].(models.User), nil).
+			AnyTimes()
 
 		// get under matchmaking player
 		mockRepository.
@@ -76,16 +82,22 @@ func TestFilterEligibleOpponent(t *testing.T) {
 			FilterOutOpponents(client, playerPool).
 			Return([]models.PlayerPool{
 				{
-					EloPoints: 800,
-					JoinTime:  baseTime.Add(3 * time.Minute),
+					User: models.User{
+						EloPoints: 800,
+					},
+					JoinTime: baseTime.Add(3 * time.Minute),
 				},
 				{
-					EloPoints: 840,
-					JoinTime:  baseTime.Add(2 * time.Minute),
+					User: models.User{
+						EloPoints: 840,
+					},
+					JoinTime: baseTime.Add(2 * time.Minute),
 				},
 				{
-					EloPoints: 800,
-					JoinTime:  baseTime.Add(4 * time.Minute),
+					User: models.User{
+						EloPoints: 800,
+					},
+					JoinTime: baseTime.Add(4 * time.Minute),
 				},
 			}, nil)
 
@@ -94,37 +106,49 @@ func TestFilterEligibleOpponent(t *testing.T) {
 			EXPECT().
 			SortPlayerPool(client, []models.PlayerPool{
 				{
-					EloPoints: 800,
-					JoinTime:  baseTime.Add(3 * time.Minute),
+					User: models.User{
+						EloPoints: 800,
+					},
+					JoinTime: baseTime.Add(3 * time.Minute),
 				},
 				{
-					EloPoints: 840,
-					JoinTime:  baseTime.Add(2 * time.Minute),
+					User: models.User{
+						EloPoints: 840,
+					},
+					JoinTime: baseTime.Add(2 * time.Minute),
 				},
 				{
-					EloPoints: 800,
-					JoinTime:  baseTime.Add(4 * time.Minute),
+					User: models.User{
+						EloPoints: 800,
+					},
+					JoinTime: baseTime.Add(4 * time.Minute),
 				},
 			}).
 			Return([]models.PlayerPool{
 				{
-					EloPoints: 800,
-					JoinTime:  baseTime.Add(3 * time.Minute),
+					User: models.User{
+						EloPoints: 800,
+					},
+					JoinTime: baseTime.Add(3 * time.Minute),
 				},
 				{
-					EloPoints: 800,
-					JoinTime:  baseTime.Add(4 * time.Minute),
+					User: models.User{
+						EloPoints: 800,
+					},
+					JoinTime: baseTime.Add(4 * time.Minute),
 				},
 				{
-					EloPoints: 840,
-					JoinTime:  baseTime.Add(2 * time.Minute),
+					User: models.User{
+						EloPoints: 840,
+					},
+					JoinTime: baseTime.Add(2 * time.Minute),
 				},
 			}, nil)
 
 		s := &webSocketService{
 			repository:    test.Fields.Repository,
 			wsConnections: nil,
-			baseService: BaseService{
+			BaseService: &BaseService{
 				WebSocketService: mockWebSocketService,
 			},
 		}

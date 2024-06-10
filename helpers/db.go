@@ -18,5 +18,9 @@ func GetTimeoutThreshold(env string) time.Duration {
 }
 
 func GetPoolKey(params models.PoolParams) string {
-	return "pool_" + params.Type + "_" + params.TimeControl
+	return "pool:" + params.Type + ":" + params.TimeControl
+}
+
+func GetGameMoveCacheKey(params models.MoveCache) string {
+	return "game_move:" + params.ID.String()
 }

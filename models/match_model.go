@@ -6,7 +6,6 @@ type HandleMatchmakingParams struct {
 }
 
 type HandleMatchmakingResponse struct {
-	// BETa
 	ID       string     `json:"id"`
 	Opponent PlayerPool `json:"opponent"`
 }
