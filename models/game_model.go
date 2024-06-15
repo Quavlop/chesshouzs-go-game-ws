@@ -17,9 +17,14 @@ type PlayerPool struct {
 	User     User
 }
 
+type PlayerMatchmakingResponse struct {
+	JoinTime string
+	User     User
+}
+
 type PlayerPoolParams struct {
 	PoolParams
-	User
+	User   User
 	Player PlayerPool
 }
 
@@ -36,8 +41,10 @@ type MoveCache struct {
 }
 
 type InsertGameParams struct {
+	ID                uuid.UUID
 	WhitePlayerID     uuid.UUID
 	BlackPlayerID     uuid.UUID
 	GameTypeVariantID uuid.UUID
 	MovesCacheRef     uuid.UUID
+	CreatedAt         string
 }

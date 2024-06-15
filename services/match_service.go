@@ -5,9 +5,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"ingenhouzs.com/chesshouzs/go-game/constants"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
@@ -46,7 +48,28 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, errs.ERR_INVALID_GAME_TYPE
 	}
 
-	eligibleOpponents, err := s.BaseService.WebSocketService.FilterEligibleOpponent(client, models.FilterEligibleOpponentParams{
+	// check if player is already in game
+	if s.wsConnections.IsClientInRoom(constants.WS_ROOM_TYPE_GAME, user.ID.String()) {
+		return result, errs.ERR_PLAYER_IN_GAME
+	}
+
+	// check if player is registered on pool
+	playerPoolData, err := s.repository.GetPlayerPoolData(models.PlayerPoolParams{
+		PoolParams: models.PoolParams{
+			Type:        params.Type,
+			TimeControl: params.TimeControl,
+		},
+		User: user,
+	})
+	if err != nil && err != errs.ERR_REDIS_DATA_NOT_FOUND {
+		return result, err
+	}
+
+	if len(playerPoolData) > 0 {
+		return result, errs.ERR_PLAYER_IN_POOL
+	}
+
+	eligibleOpponents, err := s.FilterEligibleOpponent(client, models.FilterEligibleOpponentParams{
 		Filter: models.PoolParams{
 			Type:        params.Type,
 			TimeControl: params.TimeControl,
@@ -60,23 +83,49 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, err
 	}
 
+	joinTime := time.Now()
+	poolParams := models.PlayerPoolParams{
+		PoolParams: models.PoolParams{
+			Type:        params.Type,
+			TimeControl: params.TimeControl,
+		},
+		User: user,
+	}
+
 	if err == errs.ERR_NO_AVAILABLE_PLAYERS {
-		err = s.repository.InsertPlayerIntoPool(models.PlayerPoolParams{
-			PoolParams: models.PoolParams{
-				Type:        params.Type,
-				TimeControl: params.TimeControl,
-			},
-			User: user,
+		err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{helpers.GetPlayerPoolCloneKey(poolParams), helpers.GetPoolKey(poolParams.PoolParams)}, func(pipe redis.Pipeliner) error {
+			err = s.repository.InsertPlayerIntoPool(poolParams, joinTime)
+			if err != nil {
+				return err
+			}
+
+			err = s.repository.InsertPlayerOnPoolDataToRedis(poolParams, joinTime)
+			if err != nil {
+				return err
+			}
+			return nil
 		})
 		if err != nil {
 			return result, err
 		}
+
+		result = models.HandleMatchmakingResponse{
+			ID: user.ID.String(),
+			Opponent: models.PlayerMatchmakingResponse{
+				JoinTime: joinTime.Format(time.RFC3339),
+				User:     user,
+			},
+		}
+
 		return result, nil
 	}
 
 	// if found match then remove the enemy from pool and insert both into game data
 	opponent := eligibleOpponents.Player
-	result.Opponent = opponent
+	result.Opponent = models.PlayerMatchmakingResponse{
+		JoinTime: joinTime.Format(time.RFC3339),
+		User:     user,
+	}
 
 	redisPoolKey := helpers.GetPoolKey(models.PoolParams{
 		Type:        params.Type,
@@ -96,6 +145,13 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		if err != nil {
 			return err
 		}
+
+		// delete redis hash key for player data clone
+		err = s.repository.DeletePlayerOnPoolDataToRedis(poolParams, joinTime)
+		if err != nil {
+			return err
+		}
+
 		// insert game cache move ref to redis
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID: moveCacheID,
@@ -125,15 +181,35 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	}
 
 	// insert to mysql
+	gameID, _ := uuid.Parse(uuid.NewString())
 	err = s.repository.InsertGameData(models.InsertGameParams{
+		ID:                gameID,
 		WhitePlayerID:     client.User.ID,
 		BlackPlayerID:     opponent.User.ID,
 		GameTypeVariantID: gameTypeVariantID,
 		MovesCacheRef:     moveCacheID,
+		CreatedAt:         time.Now().Format(time.RFC3339),
 	})
 	if err != nil {
 		return result, err
 	}
+
+	s.wsConnections.EmitOneOnOne(models.WebSocketChannel{
+		Source:       client.User.ID.String(),
+		TargetClient: opponent.User.ID.String(),
+		Event:        constants.WS_EVENT_EMIT_START_GAME,
+		Data: models.GameData{
+			ID: gameID.String(),
+		},
+	})
+
+	room := s.wsConnections.CreateRoom(&models.GameRoom{
+		Name: gameID.String(),
+		Type: constants.WS_ROOM_TYPE_GAME,
+	})
+
+	room.AddClient(client.User.ID.String())
+	room.AddClient(opponent.User.ID.String())
 
 	return result, nil
 }
@@ -153,7 +229,7 @@ func (s *webSocketService) FilterEligibleOpponent(client models.WebSocketClientD
 		return result, err
 	}
 
-	playerPool, err = s.BaseService.WebSocketService.FilterOutOpponents(client, playerPool)
+	playerPool, err = s.FilterOutOpponents(client, playerPool)
 	if err != nil {
 		helpers.LogErrorCallStack(*client.Context, err)
 		return result, err
@@ -165,7 +241,7 @@ func (s *webSocketService) FilterEligibleOpponent(client models.WebSocketClientD
 		return result, err
 	}
 
-	playerPool, err = s.BaseService.WebSocketService.SortPlayerPool(client, playerPool)
+	playerPool, err = s.SortPlayerPool(client, playerPool)
 	if err != nil {
 		helpers.LogErrorCallStack(*client.Context, err)
 		return result, err

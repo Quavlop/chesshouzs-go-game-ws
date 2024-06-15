@@ -6,6 +6,10 @@ type HandleMatchmakingParams struct {
 }
 
 type HandleMatchmakingResponse struct {
-	ID       string     `json:"id"`
-	Opponent PlayerPool `json:"opponent"`
+	ID       string                    `json:"id"`
+	Opponent PlayerMatchmakingResponse `json:"opponent"`
+}
+
+type GameData struct {
+	ID string `json:"id"`
 }

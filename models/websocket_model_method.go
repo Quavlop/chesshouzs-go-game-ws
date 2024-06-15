@@ -4,7 +4,7 @@ func (wsRoom *GameRoom) GetRoomID() string {
 	return wsRoom.id
 }
 
-func (wsRoom *GameRoom) GetRoomData(id string) GameRoom {
+func (wsRoom *GameRoom) GetRoomData() GameRoom {
 	return GameRoom{
 		Name: wsRoom.Name,
 		Type: wsRoom.Type,

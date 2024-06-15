@@ -14,7 +14,11 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/services"
 )
 
-var wsConnections *websocket.Connections
+// individual connection per client
+// key : user's session token
+// value : client connection metadata
+// TODO -> get user list from db
+var wsConnections *websocket.Connections = &websocket.Connections{}
 
 func main() {
 	e := echo.New()
@@ -54,15 +58,9 @@ func main() {
 		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
-	// individual connection per client
-	// key : user's session token
-	// value : client connection metadata
-	wsConnections = &websocket.Connections{} // TODO -> get user list from db
-
 	// rooms connection
 	// key : room_id
 	// value : room_object consisting room_id and client list (map)
-	wsGameRooms := make(map[string]*models.GameRoom) // TODO -> get room list from db
 	wsConnections.Init()
 
 	repository := repositories.NewRepository(psql, redis)
@@ -81,7 +79,7 @@ func main() {
 	websocketService = services.NewWebSocketService(repository, wsConnections, baseService)
 
 	controller := controllers.NewController(e, httpService, websocketService)
-	websocket.NewWebSocketHandler(e, controller, wsConnections, wsGameRooms)
+	websocket.NewWebSocketHandler(e, controller, wsConnections)
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
 }

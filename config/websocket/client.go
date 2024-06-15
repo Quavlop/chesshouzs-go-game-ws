@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
@@ -26,18 +27,27 @@ func (c *Connections) GetClientConnection(token string) *models.WebSocketClientC
 	return c.clients[token]
 }
 
-func (c *Connections) GetClientActiveRooms(token string) map[string]models.GameRoom {
-	var rooms map[string]models.GameRoom
+func (c *Connections) GetClientActiveRooms(token string) []models.GameRoom {
+	var rooms []models.GameRoom
 
 	for _, room := range c.gameRooms {
 		if room.IsClientInRoom(token) {
-			rooms[token] = models.GameRoom{
+			rooms = append(rooms, models.GameRoom{
 				Name: room.Name,
 				Type: room.Type,
-			}
+			})
 		}
 	}
 	return rooms
+}
+
+func (c *Connections) IsClientInRoom(roomType string, token string) bool {
+	for _, room := range c.gameRooms {
+		if room.IsClientInRoom(token) && room.Type == roomType {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Connections) IsClientActive(token string) *models.WebSocketClientConnection {
@@ -63,7 +73,12 @@ func (c *Connections) deleteConnection(token string, conn *ws.Conn) {
 	for _, room := range c.gameRooms {
 		delete(room.GetClients(), token)
 	}
+}
 
+func (c *Connections) CreateRoom(params *models.GameRoom) *models.GameRoom {
+	id, _ := uuid.Parse(uuid.NewString())
+	c.gameRooms[id.String()] = params
+	return c.gameRooms[id.String()]
 }
 
 func (c *Connections) EmitOneOnOne(params models.WebSocketChannel) error {

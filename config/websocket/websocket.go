@@ -28,14 +28,14 @@ func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, erro
 		return conn, err
 	}
 
-	token := c.QueryParams().Get("sid")
-	connectionList.addConnection(token, conn)
+	token := c.Get("user").(models.User)
+	connectionList.addConnection(token.ID.String(), conn)
 
 	helpers.WriteOutLog("[WEBSOCKET] CONNECTION ESTABLISHED : \"" + c.Request().RemoteAddr + " | " + c.Request().Host + " | " + time.Now().Format(os.Getenv("TIME_FORMAT")) + "\"")
 	return conn, nil
 }
 
-func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, connectionList *Connections, gameRoomList map[string]*models.GameRoom) {
+func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, connectionList *Connections) {
 	e.GET("/ws", func(c echo.Context) error {
 		conn, err := initConnection(c, connectionList)
 		if err != nil {
@@ -67,7 +67,7 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 		if err != nil {
 			helpers.LogErrorCallStack(c, err)
 			helpers.WriteOutLog("[WEBSOCKET] Error response : " + err.Error())
-			continue
+			response = helpers.ErrorWebSocketResponseWrap(message.Event, err.Error())
 		}
 
 		err = conn.WriteJSON(response)

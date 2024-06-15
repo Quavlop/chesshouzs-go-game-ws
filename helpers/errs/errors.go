@@ -13,4 +13,6 @@ var (
 	ERR_ERROR_TIME_CONTROL_PARSE = errors.New("failed to parse time control format")
 	ERR_INVALID_GAME_TYPE        = errors.New("invalid game type")
 	ERR_REDIS_DATA_NOT_FOUND     = errors.New("redis data not found")
+	ERR_PLAYER_IN_GAME           = errors.New("player is already on an existing game")
+	ERR_PLAYER_IN_POOL           = errors.New("player is under matchmaking")
 )
