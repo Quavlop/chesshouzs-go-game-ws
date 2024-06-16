@@ -17,7 +17,10 @@ func Auth(r interfaces.Repository) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return helpers.HttpResponse(c, http.StatusUnauthorized, "Unauthenticated", nil)
+				authHeader = c.QueryParam("sid")
+				if authHeader == "" {
+					return helpers.HttpResponse(c, http.StatusUnauthorized, "Unauthenticated", nil)
+				}
 			}
 			tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
 			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

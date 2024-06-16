@@ -2,7 +2,9 @@ package websocket
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	ws "github.com/gorilla/websocket"
@@ -17,6 +19,19 @@ import (
 var upgrader = ws.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		if os.Getenv("ENVIRONMENT") == "development" {
+			return true
+		}
+		var allowedOrigins = strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+		origin := r.Header.Get("Origin")
+		for _, allowedOrigin := range allowedOrigins {
+			if origin == allowedOrigin {
+				return true
+			}
+		}
+		return false
+	},
 }
 
 func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, error) {
