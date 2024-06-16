@@ -76,7 +76,7 @@ func (c *Connections) deleteConnection(token string, conn *ws.Conn) {
 }
 
 func (c *Connections) CreateRoom(params *models.GameRoom) *models.GameRoom {
-	id, _ := uuid.Parse(uuid.NewString())
+	id := uuid.New()
 	c.gameRooms[id.String()] = params
 	return c.gameRooms[id.String()]
 }
@@ -90,7 +90,7 @@ func (c *Connections) EmitOneOnOne(params models.WebSocketChannel) error {
 
 	err := targetClient.Connection.WriteJSON(models.WebSocketResponse{
 		Status: constants.WS_SERVER_RESPONSE_SUCCESS,
-		Event:  params.Source,
+		Event:  params.Event,
 		Data:   params.Data,
 	})
 	if err != nil {

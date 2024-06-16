@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -19,7 +20,10 @@ func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]mod
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
-	redisClient := r.redis.ZRange(ctx, key, 0, -1)
+	redisClient := r.redis.ZRangeByScore(ctx, key, &redis.ZRangeBy{
+		Min: strconv.Itoa(int(params.LowerBound)),
+		Max: strconv.Itoa(int(params.UpperBound)),
+	})
 	pool, err := redisClient.Result()
 	if err != nil {
 		return data, err

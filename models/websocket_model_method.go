@@ -21,6 +21,9 @@ func (wsRoom *GameRoom) IsClientInRoom(token string) bool {
 }
 
 func (wsRoom *GameRoom) AddClient(token string) {
+	if wsRoom.clients == nil {
+		wsRoom.clients = make(map[string]bool)
+	}
 	wsRoom.clients[token] = true
 }
 

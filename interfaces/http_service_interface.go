@@ -8,4 +8,5 @@ type HttpService interface {
 
 type GameService interface {
 	IsValidGameType(params models.GameTypeVariant) (bool, error)
+	CalculateEloBounds(params models.User) models.EloBounds
 }

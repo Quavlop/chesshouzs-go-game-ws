@@ -1,6 +1,11 @@
 package services
 
-import "ingenhouzs.com/chesshouzs/go-game/models"
+import (
+	"os"
+	"strconv"
+
+	"ingenhouzs.com/chesshouzs/go-game/models"
+)
 
 // func (s *gameRoomService) GetClients() map[string]bool {
 // 	return s.room.GetClients()
@@ -28,4 +33,15 @@ func (s *httpService) IsValidGameType(params models.GameTypeVariant) (bool, erro
 	}
 
 	return false, nil
+}
+
+func (s *httpService) CalculateEloBounds(params models.User) models.EloBounds {
+	threshold, err := strconv.Atoi(os.Getenv("ELO_GAP_THRESHOLD"))
+	if err != nil {
+		threshold = 150
+	}
+	return models.EloBounds{
+		Upper: params.EloPoints + int32(threshold),
+		Lower: params.EloPoints - int32(threshold),
+	}
 }

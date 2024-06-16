@@ -10,6 +10,8 @@ type PoolParams struct {
 	ID          uuid.UUID
 	Type        string
 	TimeControl string
+	UpperBound  int32
+	LowerBound  int32
 }
 
 type PlayerPool struct {
@@ -47,4 +49,9 @@ type InsertGameParams struct {
 	GameTypeVariantID uuid.UUID
 	MovesCacheRef     uuid.UUID
 	CreatedAt         string
+}
+
+type EloBounds struct {
+	Upper int32
+	Lower int32
 }

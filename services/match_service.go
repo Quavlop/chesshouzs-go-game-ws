@@ -69,10 +69,14 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, errs.ERR_PLAYER_IN_POOL
 	}
 
+	eloBounds := s.BaseService.HttpService.CalculateEloBounds(user)
+
 	eligibleOpponents, err := s.FilterEligibleOpponent(client, models.FilterEligibleOpponentParams{
 		Filter: models.PoolParams{
 			Type:        params.Type,
 			TimeControl: params.TimeControl,
+			UpperBound:  eloBounds.Upper,
+			LowerBound:  eloBounds.Lower,
 		},
 		Client: models.PlayerPool{
 			User: user,
@@ -132,7 +136,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		TimeControl: params.TimeControl,
 	})
 
-	moveCacheID, _ := uuid.Parse(uuid.NewString())
+	moveCacheID := uuid.New()
 
 	err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{redisPoolKey}, func(pipe redis.Pipeliner) error {
 		err = s.repository.DeletePlayerFromPool(models.PlayerPoolParams{
@@ -181,7 +185,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	}
 
 	// insert to mysql
-	gameID, _ := uuid.Parse(uuid.NewString())
+	gameID := uuid.New()
 	err = s.repository.InsertGameData(models.InsertGameParams{
 		ID:                gameID,
 		WhitePlayerID:     client.User.ID,
@@ -211,6 +215,8 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	room.AddClient(client.User.ID.String())
 	room.AddClient(opponent.User.ID.String())
 
+	result.ID = gameID.String()
+
 	return result, nil
 }
 
@@ -229,17 +235,17 @@ func (s *webSocketService) FilterEligibleOpponent(client models.WebSocketClientD
 		return result, err
 	}
 
-	playerPool, err = s.FilterOutOpponents(client, playerPool)
-	if err != nil {
-		helpers.LogErrorCallStack(*client.Context, err)
-		return result, err
-	}
+	// playerPool, err = s.FilterOutOpponents(client, playerPool)
+	// if err != nil {
+	// 	helpers.LogErrorCallStack(*client.Context, err)
+	// 	return result, err
+	// }
 
-	if len(playerPool) <= 0 {
-		err = errs.ERR_NO_AVAILABLE_PLAYERS
-		helpers.LogErrorCallStack(*client.Context, err)
-		return result, err
-	}
+	// if len(playerPool) <= 0 {
+	// 	err = errs.ERR_NO_AVAILABLE_PLAYERS
+	// 	helpers.LogErrorCallStack(*client.Context, err)
+	// 	return result, err
+	// }
 
 	playerPool, err = s.SortPlayerPool(client, playerPool)
 	if err != nil {
