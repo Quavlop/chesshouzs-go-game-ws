@@ -42,13 +42,17 @@ type MoveCache struct {
 	Turn bool
 }
 
-type InsertGameParams struct {
+type GameActiveData struct {
 	ID                uuid.UUID
 	WhitePlayerID     uuid.UUID
 	BlackPlayerID     uuid.UUID
 	GameTypeVariantID uuid.UUID
 	MovesCacheRef     uuid.UUID
-	CreatedAt         string
+	Moves             string
+	IsDone            bool
+	WinnerPlayerID    uuid.UUID
+	StartTime         string
+	EndTime           string
 }
 
 type EloBounds struct {

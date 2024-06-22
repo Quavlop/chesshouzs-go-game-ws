@@ -37,32 +37,46 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
-// DeletePlayerFromPool mocks base method.
-func (m *MockRepository) DeletePlayerFromPool(params models.PlayerPoolParams) error {
+// DeleteMoveCacheIdentifier mocks base method.
+func (m *MockRepository) DeleteMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePlayerFromPool", params)
+	ret := m.ctrl.Call(m, "DeleteMoveCacheIdentifier", params, pipe)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteMoveCacheIdentifier indicates an expected call of DeleteMoveCacheIdentifier.
+func (mr *MockRepositoryMockRecorder) DeleteMoveCacheIdentifier(params, pipe interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMoveCacheIdentifier", reflect.TypeOf((*MockRepository)(nil).DeleteMoveCacheIdentifier), params, pipe)
+}
+
+// DeletePlayerFromPool mocks base method.
+func (m *MockRepository) DeletePlayerFromPool(params models.PlayerPoolParams, pipe redis.Pipeliner) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePlayerFromPool", params, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePlayerFromPool indicates an expected call of DeletePlayerFromPool.
-func (mr *MockRepositoryMockRecorder) DeletePlayerFromPool(params interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeletePlayerFromPool(params, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerFromPool", reflect.TypeOf((*MockRepository)(nil).DeletePlayerFromPool), params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerFromPool", reflect.TypeOf((*MockRepository)(nil).DeletePlayerFromPool), params, pipe)
 }
 
 // DeletePlayerOnPoolDataToRedis mocks base method.
-func (m *MockRepository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error {
+func (m *MockRepository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePlayerOnPoolDataToRedis", params, joinTime)
+	ret := m.ctrl.Call(m, "DeletePlayerOnPoolDataToRedis", params, joinTime, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePlayerOnPoolDataToRedis indicates an expected call of DeletePlayerOnPoolDataToRedis.
-func (mr *MockRepositoryMockRecorder) DeletePlayerOnPoolDataToRedis(params, joinTime interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeletePlayerOnPoolDataToRedis(params, joinTime, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerOnPoolDataToRedis", reflect.TypeOf((*MockRepository)(nil).DeletePlayerOnPoolDataToRedis), params, joinTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerOnPoolDataToRedis", reflect.TypeOf((*MockRepository)(nil).DeletePlayerOnPoolDataToRedis), params, joinTime, pipe)
 }
 
 // GetGameTypeVariant mocks base method.
@@ -78,6 +92,21 @@ func (m *MockRepository) GetGameTypeVariant(params models.GameTypeVariant) ([]mo
 func (mr *MockRepositoryMockRecorder) GetGameTypeVariant(params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGameTypeVariant", reflect.TypeOf((*MockRepository)(nil).GetGameTypeVariant), params)
+}
+
+// GetPlayerCurrentGameState mocks base method.
+func (m *MockRepository) GetPlayerCurrentGameState(token string) (models.GameActiveData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlayerCurrentGameState", token)
+	ret0, _ := ret[0].(models.GameActiveData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPlayerCurrentGameState indicates an expected call of GetPlayerCurrentGameState.
+func (mr *MockRepositoryMockRecorder) GetPlayerCurrentGameState(token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlayerCurrentGameState", reflect.TypeOf((*MockRepository)(nil).GetPlayerCurrentGameState), token)
 }
 
 // GetPlayerPoolData mocks base method.
@@ -126,7 +155,7 @@ func (mr *MockRepositoryMockRecorder) GetUserDataByID(id interface{}) *gomock.Ca
 }
 
 // InsertGameData mocks base method.
-func (m *MockRepository) InsertGameData(params models.InsertGameParams) error {
+func (m *MockRepository) InsertGameData(params models.GameActiveData) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InsertGameData", params)
 	ret0, _ := ret[0].(error)
@@ -140,45 +169,45 @@ func (mr *MockRepositoryMockRecorder) InsertGameData(params interface{}) *gomock
 }
 
 // InsertMoveCacheIdentifier mocks base method.
-func (m *MockRepository) InsertMoveCacheIdentifier(params models.MoveCache) error {
+func (m *MockRepository) InsertMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertMoveCacheIdentifier", params)
+	ret := m.ctrl.Call(m, "InsertMoveCacheIdentifier", params, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertMoveCacheIdentifier indicates an expected call of InsertMoveCacheIdentifier.
-func (mr *MockRepositoryMockRecorder) InsertMoveCacheIdentifier(params interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) InsertMoveCacheIdentifier(params, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertMoveCacheIdentifier", reflect.TypeOf((*MockRepository)(nil).InsertMoveCacheIdentifier), params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertMoveCacheIdentifier", reflect.TypeOf((*MockRepository)(nil).InsertMoveCacheIdentifier), params, pipe)
 }
 
 // InsertPlayerIntoPool mocks base method.
-func (m *MockRepository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time) error {
+func (m *MockRepository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertPlayerIntoPool", params, joinTime)
+	ret := m.ctrl.Call(m, "InsertPlayerIntoPool", params, joinTime, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertPlayerIntoPool indicates an expected call of InsertPlayerIntoPool.
-func (mr *MockRepositoryMockRecorder) InsertPlayerIntoPool(params, joinTime interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) InsertPlayerIntoPool(params, joinTime, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerIntoPool", reflect.TypeOf((*MockRepository)(nil).InsertPlayerIntoPool), params, joinTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerIntoPool", reflect.TypeOf((*MockRepository)(nil).InsertPlayerIntoPool), params, joinTime, pipe)
 }
 
 // InsertPlayerOnPoolDataToRedis mocks base method.
-func (m *MockRepository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error {
+func (m *MockRepository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertPlayerOnPoolDataToRedis", params, joinTime)
+	ret := m.ctrl.Call(m, "InsertPlayerOnPoolDataToRedis", params, joinTime, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertPlayerOnPoolDataToRedis indicates an expected call of InsertPlayerOnPoolDataToRedis.
-func (mr *MockRepositoryMockRecorder) InsertPlayerOnPoolDataToRedis(params, joinTime interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) InsertPlayerOnPoolDataToRedis(params, joinTime, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerOnPoolDataToRedis", reflect.TypeOf((*MockRepository)(nil).InsertPlayerOnPoolDataToRedis), params, joinTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerOnPoolDataToRedis", reflect.TypeOf((*MockRepository)(nil).InsertPlayerOnPoolDataToRedis), params, joinTime, pipe)
 }
 
 // WithRedisTrx mocks base method.
@@ -218,32 +247,61 @@ func (m *MockMatchRepository) EXPECT() *MockMatchRepositoryMockRecorder {
 	return m.recorder
 }
 
-// DeletePlayerFromPool mocks base method.
-func (m *MockMatchRepository) DeletePlayerFromPool(params models.PlayerPoolParams) error {
+// DeleteMoveCacheIdentifier mocks base method.
+func (m *MockMatchRepository) DeleteMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePlayerFromPool", params)
+	ret := m.ctrl.Call(m, "DeleteMoveCacheIdentifier", params, pipe)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteMoveCacheIdentifier indicates an expected call of DeleteMoveCacheIdentifier.
+func (mr *MockMatchRepositoryMockRecorder) DeleteMoveCacheIdentifier(params, pipe interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteMoveCacheIdentifier", reflect.TypeOf((*MockMatchRepository)(nil).DeleteMoveCacheIdentifier), params, pipe)
+}
+
+// DeletePlayerFromPool mocks base method.
+func (m *MockMatchRepository) DeletePlayerFromPool(params models.PlayerPoolParams, pipe redis.Pipeliner) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePlayerFromPool", params, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePlayerFromPool indicates an expected call of DeletePlayerFromPool.
-func (mr *MockMatchRepositoryMockRecorder) DeletePlayerFromPool(params interface{}) *gomock.Call {
+func (mr *MockMatchRepositoryMockRecorder) DeletePlayerFromPool(params, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerFromPool", reflect.TypeOf((*MockMatchRepository)(nil).DeletePlayerFromPool), params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerFromPool", reflect.TypeOf((*MockMatchRepository)(nil).DeletePlayerFromPool), params, pipe)
 }
 
 // DeletePlayerOnPoolDataToRedis mocks base method.
-func (m *MockMatchRepository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error {
+func (m *MockMatchRepository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePlayerOnPoolDataToRedis", params, joinTime)
+	ret := m.ctrl.Call(m, "DeletePlayerOnPoolDataToRedis", params, joinTime, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePlayerOnPoolDataToRedis indicates an expected call of DeletePlayerOnPoolDataToRedis.
-func (mr *MockMatchRepositoryMockRecorder) DeletePlayerOnPoolDataToRedis(params, joinTime interface{}) *gomock.Call {
+func (mr *MockMatchRepositoryMockRecorder) DeletePlayerOnPoolDataToRedis(params, joinTime, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerOnPoolDataToRedis", reflect.TypeOf((*MockMatchRepository)(nil).DeletePlayerOnPoolDataToRedis), params, joinTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePlayerOnPoolDataToRedis", reflect.TypeOf((*MockMatchRepository)(nil).DeletePlayerOnPoolDataToRedis), params, joinTime, pipe)
+}
+
+// GetPlayerCurrentGameState mocks base method.
+func (m *MockMatchRepository) GetPlayerCurrentGameState(token string) (models.GameActiveData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlayerCurrentGameState", token)
+	ret0, _ := ret[0].(models.GameActiveData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPlayerCurrentGameState indicates an expected call of GetPlayerCurrentGameState.
+func (mr *MockMatchRepositoryMockRecorder) GetPlayerCurrentGameState(token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlayerCurrentGameState", reflect.TypeOf((*MockMatchRepository)(nil).GetPlayerCurrentGameState), token)
 }
 
 // GetPlayerPoolData mocks base method.
@@ -277,7 +335,7 @@ func (mr *MockMatchRepositoryMockRecorder) GetUnderMatchmakingPlayers(params int
 }
 
 // InsertGameData mocks base method.
-func (m *MockMatchRepository) InsertGameData(params models.InsertGameParams) error {
+func (m *MockMatchRepository) InsertGameData(params models.GameActiveData) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InsertGameData", params)
 	ret0, _ := ret[0].(error)
@@ -291,45 +349,45 @@ func (mr *MockMatchRepositoryMockRecorder) InsertGameData(params interface{}) *g
 }
 
 // InsertMoveCacheIdentifier mocks base method.
-func (m *MockMatchRepository) InsertMoveCacheIdentifier(params models.MoveCache) error {
+func (m *MockMatchRepository) InsertMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertMoveCacheIdentifier", params)
+	ret := m.ctrl.Call(m, "InsertMoveCacheIdentifier", params, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertMoveCacheIdentifier indicates an expected call of InsertMoveCacheIdentifier.
-func (mr *MockMatchRepositoryMockRecorder) InsertMoveCacheIdentifier(params interface{}) *gomock.Call {
+func (mr *MockMatchRepositoryMockRecorder) InsertMoveCacheIdentifier(params, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertMoveCacheIdentifier", reflect.TypeOf((*MockMatchRepository)(nil).InsertMoveCacheIdentifier), params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertMoveCacheIdentifier", reflect.TypeOf((*MockMatchRepository)(nil).InsertMoveCacheIdentifier), params, pipe)
 }
 
 // InsertPlayerIntoPool mocks base method.
-func (m *MockMatchRepository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time) error {
+func (m *MockMatchRepository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertPlayerIntoPool", params, joinTime)
+	ret := m.ctrl.Call(m, "InsertPlayerIntoPool", params, joinTime, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertPlayerIntoPool indicates an expected call of InsertPlayerIntoPool.
-func (mr *MockMatchRepositoryMockRecorder) InsertPlayerIntoPool(params, joinTime interface{}) *gomock.Call {
+func (mr *MockMatchRepositoryMockRecorder) InsertPlayerIntoPool(params, joinTime, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerIntoPool", reflect.TypeOf((*MockMatchRepository)(nil).InsertPlayerIntoPool), params, joinTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerIntoPool", reflect.TypeOf((*MockMatchRepository)(nil).InsertPlayerIntoPool), params, joinTime, pipe)
 }
 
 // InsertPlayerOnPoolDataToRedis mocks base method.
-func (m *MockMatchRepository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error {
+func (m *MockMatchRepository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InsertPlayerOnPoolDataToRedis", params, joinTime)
+	ret := m.ctrl.Call(m, "InsertPlayerOnPoolDataToRedis", params, joinTime, pipe)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // InsertPlayerOnPoolDataToRedis indicates an expected call of InsertPlayerOnPoolDataToRedis.
-func (mr *MockMatchRepositoryMockRecorder) InsertPlayerOnPoolDataToRedis(params, joinTime interface{}) *gomock.Call {
+func (mr *MockMatchRepositoryMockRecorder) InsertPlayerOnPoolDataToRedis(params, joinTime, pipe interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerOnPoolDataToRedis", reflect.TypeOf((*MockMatchRepository)(nil).InsertPlayerOnPoolDataToRedis), params, joinTime)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InsertPlayerOnPoolDataToRedis", reflect.TypeOf((*MockMatchRepository)(nil).InsertPlayerOnPoolDataToRedis), params, joinTime, pipe)
 }
 
 // MockUserRepository is a mock of UserRepository interface.

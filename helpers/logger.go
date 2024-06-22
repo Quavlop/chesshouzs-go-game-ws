@@ -71,30 +71,30 @@ func LogErrorCallStack(c echo.Context, err error) {
 	var data models.LogErrorCallStack
 	if err != nil {
 		errMessage = err.Error()
-	} else {
-		errMessage = CaptureStackTrace()
 	}
 
 	event, _ := c.Get("ws-event").(string)
 
 	if event != "" {
 		data = models.LogErrorCallStack{
-			Level:     "ERROR",
-			Type:      "WS_INTERNAL",
-			Event:     event,
-			RequestID: c.Get("request_id").(string),
-			Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
-			Message:   errMessage,
-			URI:       c.Request().URL.String(),
+			Level:      "ERROR",
+			Type:       "WS_INTERNAL",
+			Event:      event,
+			RequestID:  c.Get("request_id").(string),
+			Time:       time.Now().Format(os.Getenv("TIME_FORMAT")),
+			Message:    errMessage,
+			StackTrace: CaptureStackTrace(),
+			URI:        c.Request().URL.String(),
 		}
 	} else {
 		data = models.LogErrorCallStack{
-			Level:     "ERROR",
-			Type:      "HTTP_INTERNAL",
-			RequestID: c.Get("request_id").(string),
-			Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
-			Message:   errMessage,
-			URI:       c.Request().URL.String(),
+			Level:      "ERROR",
+			Type:       "HTTP_INTERNAL",
+			RequestID:  c.Get("request_id").(string),
+			Time:       time.Now().Format(os.Getenv("TIME_FORMAT")),
+			Message:    errMessage,
+			StackTrace: CaptureStackTrace(),
+			URI:        c.Request().URL.String(),
 		}
 	}
 

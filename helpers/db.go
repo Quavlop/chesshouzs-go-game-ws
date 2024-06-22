@@ -26,5 +26,5 @@ func GetGameMoveCacheKey(params models.MoveCache) string {
 }
 
 func GetPlayerPoolCloneKey(params models.PlayerPoolParams) string {
-	return "pool_player:" + params.Type + ":" + params.TimeControl + ":" + params.User.ID.String()
+	return "pool_player:" + params.User.ID.String()
 }

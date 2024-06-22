@@ -13,3 +13,9 @@ type HandleMatchmakingResponse struct {
 type GameData struct {
 	ID string `json:"id"`
 }
+
+type PlayerGameState struct {
+	ID          string
+	Type        string
+	TimeControl string
+}

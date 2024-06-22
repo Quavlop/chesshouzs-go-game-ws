@@ -34,6 +34,20 @@ func (m *MockHttpService) EXPECT() *MockHttpServiceMockRecorder {
 	return m.recorder
 }
 
+// CalculateEloBounds mocks base method.
+func (m *MockHttpService) CalculateEloBounds(params models.User) models.EloBounds {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CalculateEloBounds", params)
+	ret0, _ := ret[0].(models.EloBounds)
+	return ret0
+}
+
+// CalculateEloBounds indicates an expected call of CalculateEloBounds.
+func (mr *MockHttpServiceMockRecorder) CalculateEloBounds(params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateEloBounds", reflect.TypeOf((*MockHttpService)(nil).CalculateEloBounds), params)
+}
+
 // IsValidGameType mocks base method.
 func (m *MockHttpService) IsValidGameType(params models.GameTypeVariant) (bool, error) {
 	m.ctrl.T.Helper()
@@ -70,6 +84,20 @@ func NewMockGameService(ctrl *gomock.Controller) *MockGameService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockGameService) EXPECT() *MockGameServiceMockRecorder {
 	return m.recorder
+}
+
+// CalculateEloBounds mocks base method.
+func (m *MockGameService) CalculateEloBounds(params models.User) models.EloBounds {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CalculateEloBounds", params)
+	ret0, _ := ret[0].(models.EloBounds)
+	return ret0
+}
+
+// CalculateEloBounds indicates an expected call of CalculateEloBounds.
+func (mr *MockGameServiceMockRecorder) CalculateEloBounds(params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateEloBounds", reflect.TypeOf((*MockGameService)(nil).CalculateEloBounds), params)
 }
 
 // IsValidGameType mocks base method.

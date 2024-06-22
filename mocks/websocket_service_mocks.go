@@ -8,6 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	echo "github.com/labstack/echo"
 	models "ingenhouzs.com/chesshouzs/go-game/models"
 )
 
@@ -32,6 +33,20 @@ func NewMockWebsocketService(ctrl *gomock.Controller) *MockWebsocketService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockWebsocketService) EXPECT() *MockWebsocketServiceMockRecorder {
 	return m.recorder
+}
+
+// CleanMatchupState mocks base method.
+func (m *MockWebsocketService) CleanMatchupState(c echo.Context, user models.User) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CleanMatchupState", c, user)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CleanMatchupState indicates an expected call of CleanMatchupState.
+func (mr *MockWebsocketServiceMockRecorder) CleanMatchupState(c, user interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanMatchupState", reflect.TypeOf((*MockWebsocketService)(nil).CleanMatchupState), c, user)
 }
 
 // FilterEligibleOpponent mocks base method.
@@ -143,6 +158,20 @@ func NewMockMatchService(ctrl *gomock.Controller) *MockMatchService {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockMatchService) EXPECT() *MockMatchServiceMockRecorder {
 	return m.recorder
+}
+
+// CleanMatchupState mocks base method.
+func (m *MockMatchService) CleanMatchupState(c echo.Context, user models.User) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CleanMatchupState", c, user)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CleanMatchupState indicates an expected call of CleanMatchupState.
+func (mr *MockMatchServiceMockRecorder) CleanMatchupState(c, user interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanMatchupState", reflect.TypeOf((*MockMatchService)(nil).CleanMatchupState), c, user)
 }
 
 // FilterEligibleOpponent mocks base method.

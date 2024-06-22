@@ -9,28 +9,32 @@ import (
 )
 
 type Connections struct {
-	clients   map[string]*models.WebSocketClientConnection
-	gameRooms map[string]*models.GameRoom
+	clients   SafeMapClient
+	gameRooms SafeMapGameRoom
 }
 
 func (c *Connections) Init() {
-	c.clients = make(map[string]*models.WebSocketClientConnection)
-	c.gameRooms = make(map[string]*models.GameRoom)
+	c.clients.NewMap()
+	c.gameRooms.NewMap()
 	// c.gameRooms[0].AddClient()
 }
 
 func (c *Connections) GetConnections() map[string]*models.WebSocketClientConnection {
-	return c.clients
+	return c.clients.GetMap()
+}
+
+func (c *Connections) GetRooms() map[string]*models.GameRoom {
+	return c.gameRooms.GetMap()
 }
 
 func (c *Connections) GetClientConnection(token string) *models.WebSocketClientConnection {
-	return c.clients[token]
+	return c.GetConnections()[token]
 }
 
 func (c *Connections) GetClientActiveRooms(token string) []models.GameRoom {
 	var rooms []models.GameRoom
 
-	for _, room := range c.gameRooms {
+	for _, room := range c.gameRooms.GetMap() {
 		if room.IsClientInRoom(token) {
 			rooms = append(rooms, models.GameRoom{
 				Name: room.Name,
@@ -42,7 +46,7 @@ func (c *Connections) GetClientActiveRooms(token string) []models.GameRoom {
 }
 
 func (c *Connections) IsClientInRoom(roomType string, token string) bool {
-	for _, room := range c.gameRooms {
+	for _, room := range c.GetRooms() {
 		if room.IsClientInRoom(token) && room.Type == roomType {
 			return true
 		}
@@ -51,7 +55,7 @@ func (c *Connections) IsClientInRoom(roomType string, token string) bool {
 }
 
 func (c *Connections) IsClientActive(token string) *models.WebSocketClientConnection {
-	client, active := c.clients[token]
+	client, active := c.GetConnections()[token]
 	if !active {
 		return nil
 	}
@@ -59,7 +63,7 @@ func (c *Connections) IsClientActive(token string) *models.WebSocketClientConnec
 }
 
 func (c *Connections) addConnection(token string, conn *ws.Conn) {
-	c.clients[token] = &models.WebSocketClientConnection{
+	c.GetConnections()[token] = &models.WebSocketClientConnection{
 		Connection: conn,
 		Token:      token,
 	}
@@ -67,18 +71,18 @@ func (c *Connections) addConnection(token string, conn *ws.Conn) {
 
 func (c *Connections) deleteConnection(token string, conn *ws.Conn) {
 	// delete from global connections
-	delete(c.clients, token)
+	delete(c.GetConnections(), token)
 
 	// delete from room connections
-	for _, room := range c.gameRooms {
+	for _, room := range c.GetRooms() {
 		delete(room.GetClients(), token)
 	}
 }
 
 func (c *Connections) CreateRoom(params *models.GameRoom) *models.GameRoom {
 	id := uuid.New()
-	c.gameRooms[id.String()] = params
-	return c.gameRooms[id.String()]
+	c.GetRooms()[id.String()] = params
+	return c.GetRooms()[id.String()]
 }
 
 func (c *Connections) EmitOneOnOne(params models.WebSocketChannel) error {
@@ -105,7 +109,7 @@ func (c *Connections) EmitToRoom(params models.WebSocketChannel) error {
 	if sourceClient == nil {
 		return errs.WS_CLIENT_CONNECTION_NOT_FOUND
 	}
-	room, exists := c.gameRooms[params.TargetRoom]
+	room, exists := c.GetRooms()[params.TargetRoom]
 	if !exists {
 		return errs.WS_ROOM_NOT_FOUND
 	}
@@ -123,7 +127,7 @@ func (c *Connections) EmitToRoom(params models.WebSocketChannel) error {
 }
 
 func (c *Connections) EmitGlobalBroadcast(params models.WebSocketChannel) bool {
-	for clientID, client := range c.clients {
+	for clientID, client := range c.GetConnections() {
 		if client == nil {
 			continue
 		}

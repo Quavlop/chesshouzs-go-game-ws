@@ -3,9 +3,11 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/redis/go-redis/v9"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
@@ -15,6 +17,7 @@ import (
 func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]models.PlayerPool, error) {
 	var data []models.PlayerPool
 	key := helpers.GetPoolKey(params)
+	fmt.Println(key)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
@@ -31,6 +34,7 @@ func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]mod
 
 	for _, player := range pool {
 		var playerData models.PlayerPool
+		fmt.Println(player)
 		if err := json.Unmarshal([]byte(player), &playerData); err != nil {
 			return data, err
 		}
@@ -40,7 +44,7 @@ func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]mod
 	return data, nil
 }
 
-func (r *Repository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time) error {
+func (r *Repository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	key := helpers.GetPoolKey(params.PoolParams)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
@@ -58,10 +62,19 @@ func (r *Repository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTi
 		return err
 	}
 
-	result := r.redis.ZAdd(ctx, key, redis.Z{
-		Score:  float64(params.User.EloPoints),
-		Member: data,
-	})
+	var result *redis.IntCmd
+	if pipe != nil {
+		result = pipe.ZAdd(ctx, key, redis.Z{
+			Score:  float64(params.User.EloPoints),
+			Member: data,
+		})
+	} else {
+		result = r.redis.ZAdd(ctx, key, redis.Z{
+			Score:  float64(params.User.EloPoints),
+			Member: data,
+		})
+	}
+
 	if err := result.Err(); err != nil {
 		return err
 	}
@@ -69,8 +82,9 @@ func (r *Repository) InsertPlayerIntoPool(params models.PlayerPoolParams, joinTi
 	return nil
 }
 
-func (r *Repository) DeletePlayerFromPool(params models.PlayerPoolParams) error {
+func (r *Repository) DeletePlayerFromPool(params models.PlayerPoolParams, pipe redis.Pipeliner) error {
 	key := helpers.GetPoolKey(params.PoolParams)
+	helpers.WriteOutLog("GET POOL_REDIS : " + key)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
@@ -87,30 +101,42 @@ func (r *Repository) DeletePlayerFromPool(params models.PlayerPoolParams) error 
 		return err
 	}
 
-	result := r.redis.ZRem(ctx, key, data)
-	if err := result.Err(); err != nil {
-		return err
+	fmt.Println(string(data))
+
+	var result *redis.IntCmd
+	if pipe != nil {
+		result = pipe.ZRem(ctx, key, string(data))
+	} else {
+		result = r.redis.ZRem(ctx, key, string(data))
 	}
 
-	if result.Val() <= 0 {
-		return errs.ERR_REDIS_DATA_NOT_FOUND
+	if err := result.Err(); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (r *Repository) InsertMoveCacheIdentifier(params models.MoveCache) error {
+func (r *Repository) InsertMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error {
 	key := helpers.GetGameMoveCacheKey(params)
-	helpers.WriteOutLog("MOVE_CACHE_KEY : " + key)
+	helpers.WriteOutLog("INSERT MOVE_CACHE_KEY : " + key)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
-	result := r.redis.HMSet(ctx, key, map[string]interface{}{
-		"move": "",
-		"turn": true,
-	})
+	var result *redis.BoolCmd
+	if pipe != nil {
+		result = pipe.HMSet(ctx, key, map[string]interface{}{
+			"move": "",
+			"turn": true,
+		})
+	} else {
+		result = r.redis.HMSet(ctx, key, map[string]interface{}{
+			"move": "",
+			"turn": true,
+		})
+	}
 
 	if err := result.Err(); err != nil {
 		return err
@@ -119,7 +145,7 @@ func (r *Repository) InsertMoveCacheIdentifier(params models.MoveCache) error {
 	return nil
 }
 
-func (r *Repository) InsertGameData(params models.InsertGameParams) error {
+func (r *Repository) InsertGameData(params models.GameActiveData) error {
 
 	query := `
 		INSERT INTO game_active 
@@ -149,29 +175,23 @@ func (r *Repository) InsertGameData(params models.InsertGameParams) error {
 		params.BlackPlayerID.String(),
 		params.GameTypeVariantID.String(),
 		params.MovesCacheRef.String(),
-		params.CreatedAt,
+		params.StartTime,
 	).Scan(&empty).Error
 }
 
-func (r *Repository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error {
+func (r *Repository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	key := helpers.GetPlayerPoolCloneKey(params)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
-	data, err := json.Marshal(models.PlayerPool{
-		User: models.User{
-			ID:        params.User.ID,
-			EloPoints: params.User.EloPoints,
-		},
-		JoinTime: joinTime,
-	})
-	if err != nil {
-		return err
+	var result *redis.BoolCmd
+	if pipe != nil {
+		result = pipe.HMSet(ctx, key, "game-type", params.Type, "game-time-control", params.TimeControl, "game-join-time", joinTime)
+	} else {
+		result = r.redis.HMSet(ctx, key, "game-type", params.Type, "game-time-control", params.TimeControl, "game-join-time", joinTime)
 	}
-
-	result := r.redis.HSet(ctx, key, "data", data)
 	if err := result.Err(); err != nil {
 		return err
 	}
@@ -179,14 +199,20 @@ func (r *Repository) InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParam
 	return nil
 }
 
-func (r *Repository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error {
+func (r *Repository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error {
 	key := helpers.GetPlayerPoolCloneKey(params)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
-	result := r.redis.Del(ctx, key)
+	var result *redis.IntCmd
+	if pipe != nil {
+		result = pipe.Del(ctx, key)
+	} else {
+		result = r.redis.Del(ctx, key)
+	}
+
 	if err := result.Err(); err != nil {
 		return err
 	}
@@ -196,6 +222,7 @@ func (r *Repository) DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParam
 
 func (r *Repository) GetPlayerPoolData(params models.PlayerPoolParams) (map[string]string, error) {
 	key := helpers.GetPlayerPoolCloneKey(params)
+	helpers.WriteOutLog("GET PLAYER_POOL_CLONE : " + key)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
@@ -211,4 +238,49 @@ func (r *Repository) GetPlayerPoolData(params models.PlayerPoolParams) (map[stri
 	}
 
 	return result, nil
+}
+
+func (r *Repository) GetPlayerCurrentGameState(token string) (models.GameActiveData, error) {
+	var data models.GameActiveData
+
+	db := r.postgres.Table("game_active ga").
+		Select("*")
+
+	if token != "" {
+		db = db.Where("(white_player_id = ? OR black_player_id = ?)", token, token)
+	}
+
+	result := db.Take(&data)
+
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return data, result.Error
+	}
+
+	if result.Error == gorm.ErrRecordNotFound {
+		return data, errs.ERR_ACTIVE_GAME_NOT_FOUND
+	}
+
+	return data, nil
+}
+
+func (r *Repository) DeleteMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error {
+	key := helpers.GetGameMoveCacheKey(params)
+	helpers.WriteOutLog("REMOVE (INVALIDATION) MOVE_CACHE_KEY : " + key)
+
+	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+
+	var result *redis.IntCmd
+	if pipe != nil {
+		result = pipe.Del(ctx, key)
+	} else {
+		result = r.redis.Del(ctx, key)
+	}
+
+	if err := result.Err(); err != nil {
+		return err
+	}
+
+	return nil
 }

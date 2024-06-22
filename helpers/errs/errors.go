@@ -15,4 +15,5 @@ var (
 	ERR_REDIS_DATA_NOT_FOUND     = errors.New("redis data not found")
 	ERR_PLAYER_IN_GAME           = errors.New("player is already on an existing game")
 	ERR_PLAYER_IN_POOL           = errors.New("player is under matchmaking")
+	ERR_ACTIVE_GAME_NOT_FOUND    = errors.New("player is not in an active game")
 )

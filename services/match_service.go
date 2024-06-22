@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo"
 	"github.com/redis/go-redis/v9"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
@@ -98,12 +100,12 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 	if err == errs.ERR_NO_AVAILABLE_PLAYERS {
 		err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{helpers.GetPlayerPoolCloneKey(poolParams), helpers.GetPoolKey(poolParams.PoolParams)}, func(pipe redis.Pipeliner) error {
-			err = s.repository.InsertPlayerIntoPool(poolParams, joinTime)
+			err = s.repository.InsertPlayerIntoPool(poolParams, joinTime, pipe)
 			if err != nil {
 				return err
 			}
 
-			err = s.repository.InsertPlayerOnPoolDataToRedis(poolParams, joinTime)
+			err = s.repository.InsertPlayerOnPoolDataToRedis(poolParams, joinTime, pipe)
 			if err != nil {
 				return err
 			}
@@ -138,20 +140,31 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 	moveCacheID := uuid.New()
 
-	err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{redisPoolKey}, func(pipe redis.Pipeliner) error {
+	moveCacheKey := helpers.GetGameMoveCacheKey(models.MoveCache{
+		ID: moveCacheID,
+	})
+
+	poolCloneKey := helpers.GetPlayerPoolCloneKey(poolParams)
+
+	// TODO : remove duplicate param definition below and above
+	err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{redisPoolKey, poolCloneKey, moveCacheKey}, func(pipe redis.Pipeliner) error {
 		err = s.repository.DeletePlayerFromPool(models.PlayerPoolParams{
 			PoolParams: models.PoolParams{
 				Type:        params.Type,
 				TimeControl: params.TimeControl,
 			},
 			Player: opponent,
-		})
+		}, pipe)
 		if err != nil {
 			return err
 		}
 
 		// delete redis hash key for player data clone
-		err = s.repository.DeletePlayerOnPoolDataToRedis(poolParams, joinTime)
+		err = s.repository.DeletePlayerOnPoolDataToRedis(models.PlayerPoolParams{
+			User: models.User{
+				ID: opponent.User.ID,
+			},
+		}, joinTime, pipe)
 		if err != nil {
 			return err
 		}
@@ -159,7 +172,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		// insert game cache move ref to redis
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID: moveCacheID,
-		})
+		}, pipe)
 		if err != nil {
 			return err
 		}
@@ -186,13 +199,13 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 	// insert to mysql
 	gameID := uuid.New()
-	err = s.repository.InsertGameData(models.InsertGameParams{
+	err = s.repository.InsertGameData(models.GameActiveData{
 		ID:                gameID,
 		WhitePlayerID:     client.User.ID,
 		BlackPlayerID:     opponent.User.ID,
 		GameTypeVariantID: gameTypeVariantID,
 		MovesCacheRef:     moveCacheID,
-		CreatedAt:         time.Now().Format(time.RFC3339),
+		StartTime:         time.Now().Format(time.RFC3339),
 	})
 	if err != nil {
 		return result, err
@@ -303,4 +316,108 @@ func (s *webSocketService) PlayerSortFilter(playerOne models.PlayerPool, playerT
 		return playerOne.User.EloPoints > playerTwo.User.EloPoints
 	}
 	return playerOne.JoinTime.After(playerTwo.JoinTime)
+}
+
+func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) error {
+	/*
+		CASE 1 : player initiator is waiting for opponent then leaves page / refresh
+				(no enemy has accepted the matchup)
+			- delete player data from redis pool
+			- delete player data copy (hash key-val)
+	*/
+
+	/*
+		CASE 2 : player initiator is waiting for opponent then leaves page / refresh browser
+				(found matchup, enemy accepted after initiator leaves)
+			- delete game_active data
+			- delete move cache identifier (no need to delete redis player pool and data copy)
+	*/
+
+	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		helpers.LogErrorCallStack(c, err)
+	}
+
+	if err == errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		// find pool data clone first
+
+		playerPoolData, err := s.repository.GetPlayerPoolData(models.PlayerPoolParams{
+			User: models.User{
+				ID: user.ID,
+			},
+		})
+		fmt.Println("C 1")
+		if err != nil {
+			fmt.Println(err.Error())
+			return err
+		}
+
+		poolPlayerCloneKey := helpers.GetPlayerPoolCloneKey(models.PlayerPoolParams{
+			User: models.User{
+				ID: user.ID,
+			},
+		})
+		poolKey := helpers.GetPoolKey(models.PoolParams{
+			Type:        playerPoolData["game-type"],
+			TimeControl: playerPoolData["game-time-control"],
+		})
+		fmt.Println(poolKey)
+		fmt.Println(poolPlayerCloneKey)
+
+		err = s.repository.WithRedisTrx(c.Request().Context(), []string{poolKey, poolPlayerCloneKey}, func(pipe redis.Pipeliner) error {
+
+			// delete redis hash key for player data clone
+			err = s.repository.DeletePlayerOnPoolDataToRedis(models.PlayerPoolParams{
+				User: models.User{
+					ID: user.ID,
+				},
+			}, time.Time{}, pipe)
+			fmt.Println("C 2")
+			if err != nil {
+				fmt.Println(err.Error())
+
+				return err
+			}
+
+			joinTime, _ := time.Parse(time.RFC3339, playerPoolData["game-join-time"])
+
+			err = s.repository.DeletePlayerFromPool(models.PlayerPoolParams{
+				PoolParams: models.PoolParams{
+					Type:        playerPoolData["game-type"],
+					TimeControl: playerPoolData["game-time-control"],
+				},
+				Player: models.PlayerPool{
+					User: models.User{
+						ID:        user.ID,
+						EloPoints: user.EloPoints,
+					},
+					JoinTime: joinTime,
+				},
+			}, pipe)
+			fmt.Println("C 3")
+			if err != nil {
+				fmt.Println(err.Error())
+
+				return err
+			}
+
+			return nil
+		})
+		if err != nil {
+			helpers.LogErrorCallStack(c, err)
+			return err
+		}
+		return nil
+	}
+
+	// delete move cache identifier
+	err = s.repository.DeleteMoveCacheIdentifier(models.MoveCache{
+		ID: currentGameData.MovesCacheRef,
+	}, nil)
+	if err != nil {
+		helpers.LogErrorCallStack(c, err)
+		return err
+	}
+
+	return nil
 }

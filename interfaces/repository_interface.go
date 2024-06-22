@@ -18,13 +18,15 @@ type Repository interface {
 
 type MatchRepository interface {
 	GetUnderMatchmakingPlayers(params models.PoolParams) ([]models.PlayerPool, error)
-	InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time) error
-	DeletePlayerFromPool(params models.PlayerPoolParams) error
-	InsertMoveCacheIdentifier(params models.MoveCache) error
-	InsertGameData(params models.InsertGameParams) error
-	InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error
-	DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time) error
+	InsertPlayerIntoPool(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error
+	DeletePlayerFromPool(params models.PlayerPoolParams, pipe redis.Pipeliner) error
+	InsertMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error
+	DeleteMoveCacheIdentifier(params models.MoveCache, pipe redis.Pipeliner) error
+	InsertGameData(params models.GameActiveData) error
+	InsertPlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error
+	DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error
 	GetPlayerPoolData(params models.PlayerPoolParams) (map[string]string, error)
+	GetPlayerCurrentGameState(token string) (models.GameActiveData, error)
 }
 
 type UserRepository interface {

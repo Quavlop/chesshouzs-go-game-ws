@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	ws "github.com/gorilla/websocket"
@@ -15,6 +16,44 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
+
+type SafeMap struct {
+	mtx *sync.RWMutex
+	m   interface{}
+}
+
+type SafeMapMethods interface {
+	GetLocks() *sync.RWMutex
+	GetMap() interface{}
+}
+
+type SafeMapClient struct {
+	SafeMap
+}
+
+type SafeMapGameRoom struct {
+	SafeMap
+}
+
+func (sm *SafeMap) GetLock() *sync.RWMutex {
+	return sm.mtx
+}
+
+func (sm *SafeMapClient) GetMap() map[string]*models.WebSocketClientConnection {
+	return sm.m.(map[string]*models.WebSocketClientConnection)
+}
+
+func (sm *SafeMapGameRoom) GetMap() map[string]*models.GameRoom {
+	return sm.m.(map[string]*models.GameRoom)
+}
+
+func (sm *SafeMapClient) NewMap() {
+	sm.m = make(map[string]*models.WebSocketClientConnection)
+}
+
+func (sm *SafeMapGameRoom) NewMap() {
+	sm.m = make(map[string]*models.GameRoom)
+}
 
 var upgrader = ws.Upgrader{
 	ReadBufferSize:  1024,
@@ -73,6 +112,11 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 			token := c.Get("user").(models.User).ID.String()
 			connectionList.deleteConnection(token, conn)
 			helpers.WriteOutLog("[WEBSOCKET] Failed to read message : " + err.Error())
+			err = controller.WebSocketService.CleanMatchupState(c, c.Get("user").(models.User))
+			if err != nil {
+				helpers.WriteErrLog("[WEBSOCKET] MATCH STATE CLEAN UP FAIL : " + err.Error())
+				break
+			}
 			break
 		}
 		if message.Event == "" {
