@@ -1,8 +1,7 @@
 package repositories
 
 import (
-	"errors"
-
+	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
@@ -18,7 +17,7 @@ func (r *Repository) GetUserDataByID(id string) (models.User, error) {
 	}
 
 	if result.RecordNotFound() {
-		return user, errors.New("user data not found")
+		return user, errs.ERR_USER_NOT_FOUND
 	}
 
 	return user, nil

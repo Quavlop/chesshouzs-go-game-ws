@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt"
+	"github.com/google/uuid"
 	ws "github.com/gorilla/websocket"
 	"github.com/labstack/echo"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
@@ -73,7 +76,7 @@ var upgrader = ws.Upgrader{
 	},
 }
 
-func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, error) {
+func initConnection(c echo.Context, connectionList *Connections, isGuest bool) (*ws.Conn, error) {
 	conn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		log.Println(err)
@@ -82,8 +85,14 @@ func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, erro
 		return conn, err
 	}
 
-	token := c.Get("user").(models.User)
-	connectionList.addConnection(token.ID.String(), conn)
+	token, ok := c.Get("user").(models.User)
+	if ok {
+		connectionList.addConnection(token.ID.String(), conn)
+	} else if isGuest {
+		guestID := "G:" + uuid.New().String()
+		c.Set("guest", guestID)
+		connectionList.addConnection(guestID, conn)
+	}
 
 	helpers.WriteOutLog("[WEBSOCKET] CONNECTION ESTABLISHED : \"" + c.Request().RemoteAddr + " | " + c.Request().Host + " | " + time.Now().Format(os.Getenv("TIME_FORMAT")) + "\"")
 	return conn, nil
@@ -91,14 +100,53 @@ func initConnection(c echo.Context, connectionList *Connections) (*ws.Conn, erro
 
 func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, connectionList *Connections) {
 	e.GET("/ws", func(c echo.Context) error {
-		conn, err := initConnection(c, connectionList)
+
+		// handle guest
+		var isGuest bool
+		authHeader := c.Request().Header.Get("Authorization")
+		if authHeader == "" {
+			authHeader = c.QueryParam("sid")
+			if authHeader == "" {
+				isGuest = true
+			}
+		}
+
+		if !isGuest {
+			tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
+			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, errors.New("unexpected signing method: " + token.Header["alg"].(string))
+				}
+				return []byte(os.Getenv("JWT_SECRET")), nil
+			})
+			if err != nil {
+				isGuest = true
+			} else {
+				if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+					userID := claims["id"].(string)
+					user, err := controller.Repository.GetUserDataByID(userID)
+					if err != nil {
+						isGuest = true
+					} else {
+						c.Set("user", user)
+					}
+				}
+			}
+
+		}
+
+		conn, err := initConnection(c, connectionList, isGuest)
 		if err != nil {
 			helpers.WriteOutLog("[WEBSOCKET] FAILED TO INITIALIZE CONNECTION : " + err.Error())
 			return err
 		}
 		defer conn.Close()
-		token := c.QueryParams().Get("sid")
-		return handleIO(c, controller, conn, token, connectionList)
+
+		var sid string
+		if !isGuest {
+			sid = c.QueryParams().Get("sid")
+		}
+		return handleIO(c, controller, conn, sid, connectionList)
 	})
 }
 

@@ -25,21 +25,9 @@ func NewController(e *echo.Echo, httpService interfaces.HttpService, webSocketSe
 	}
 
 	HttpRoutes(e, controller)
-	WebsocketRoutes(e, controller)
 	PprofRoutes(e, controller)
 	return controller
 
-}
-
-func WebsocketRoutes(e *echo.Echo, controller *Controller) {
-	route := e.Group("/ws")
-
-	// middlewares
-	route.Use(middlewares.Auth(controller.Repository))
-
-	route.GET("", func(c echo.Context) error {
-		return helpers.HttpResponse(c, http.StatusOK, "WKWKsssssssss", models.Response{Status: 2})
-	})
 }
 
 func HttpRoutes(e *echo.Echo, controller *Controller) {
@@ -58,4 +46,5 @@ func PprofRoutes(e *echo.Echo, controller *Controller) {
 
 	route.GET("", echo.WrapHandler(http.HandlerFunc(pprof.Index)))
 	route.GET("/trace", echo.WrapHandler(http.HandlerFunc(pprof.Trace)))
+	route.GET("/profile", echo.WrapHandler(http.HandlerFunc(pprof.Profile)))
 }
