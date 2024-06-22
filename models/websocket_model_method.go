@@ -12,21 +12,29 @@ func (wsRoom *GameRoom) GetRoomData() GameRoom {
 }
 
 func (wsRoom *GameRoom) GetClients() map[string]bool {
-	return wsRoom.clients
+	wsRoom.clients.GetLock().Lock()
+	defer wsRoom.clients.GetLock().Unlock()
+	return wsRoom.clients.GetMap()
 }
 
 func (wsRoom *GameRoom) IsClientInRoom(token string) bool {
-	data, exists := wsRoom.clients[token]
+	wsRoom.clients.GetLock().Lock()
+	defer wsRoom.clients.GetLock().Unlock()
+	data, exists := wsRoom.GetClients()[token]
 	return data && exists
 }
 
 func (wsRoom *GameRoom) AddClient(token string) {
-	if wsRoom.clients == nil {
-		wsRoom.clients = make(map[string]bool)
+	wsRoom.clients.GetLock().Lock()
+	defer wsRoom.clients.GetLock().Unlock()
+	if wsRoom.GetClients() == nil {
+		wsRoom.clients.NewMap()
 	}
-	wsRoom.clients[token] = true
+	wsRoom.GetClients()[token] = true
 }
 
 func (wsRoom *GameRoom) RemoveClient(token string) {
-	delete(wsRoom.clients, token)
+	wsRoom.clients.GetLock()
+	delete(wsRoom.GetClients(), token)
+	wsRoom.clients.GetLock().Unlock()
 }

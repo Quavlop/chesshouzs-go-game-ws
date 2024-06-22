@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -19,44 +18,6 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
-
-type SafeMap struct {
-	mtx *sync.RWMutex
-	m   interface{}
-}
-
-type SafeMapMethods interface {
-	GetLocks() *sync.RWMutex
-	GetMap() interface{}
-}
-
-type SafeMapClient struct {
-	SafeMap
-}
-
-type SafeMapGameRoom struct {
-	SafeMap
-}
-
-func (sm *SafeMap) GetLock() *sync.RWMutex {
-	return sm.mtx
-}
-
-func (sm *SafeMapClient) GetMap() map[string]*models.WebSocketClientConnection {
-	return sm.m.(map[string]*models.WebSocketClientConnection)
-}
-
-func (sm *SafeMapGameRoom) GetMap() map[string]*models.GameRoom {
-	return sm.m.(map[string]*models.GameRoom)
-}
-
-func (sm *SafeMapClient) NewMap() {
-	sm.m = make(map[string]*models.WebSocketClientConnection)
-}
-
-func (sm *SafeMapGameRoom) NewMap() {
-	sm.m = make(map[string]*models.GameRoom)
-}
 
 var upgrader = ws.Upgrader{
 	ReadBufferSize:  1024,
