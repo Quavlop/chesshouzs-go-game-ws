@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	_ "net/http/pprof"
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -65,9 +67,6 @@ func main() {
 
 	repository := repositories.NewRepository(psql, redis)
 
-	// auth middleware
-	e.Use(middlewares.Auth(repository))
-
 	httpService := services.NewHttpService(repository, &services.BaseService{})
 	websocketService := services.NewWebSocketService(repository, wsConnections, &services.BaseService{})
 
@@ -78,7 +77,7 @@ func main() {
 	httpService = services.NewHttpService(repository, baseService)
 	websocketService = services.NewWebSocketService(repository, wsConnections, baseService)
 
-	controller := controllers.NewController(e, httpService, websocketService)
+	controller := controllers.NewController(e, httpService, websocketService, repository)
 	websocket.NewWebSocketHandler(e, controller, wsConnections)
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
