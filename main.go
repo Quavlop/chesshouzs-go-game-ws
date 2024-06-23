@@ -3,15 +3,24 @@ package main
 import (
 	"os"
 
+	_ "net/http/pprof"
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	"ingenhouzs.com/chesshouzs/go-game/config/websocket"
 	"ingenhouzs.com/chesshouzs/go-game/controllers"
 	"ingenhouzs.com/chesshouzs/go-game/middlewares"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 	"ingenhouzs.com/chesshouzs/go-game/repositories"
 	"ingenhouzs.com/chesshouzs/go-game/services"
 )
+
+// individual connection per client
+// key : user's session token
+// value : client connection metadata
+// TODO -> get user list from db
+var wsConnections *websocket.Connections = &websocket.Connections{}
 
 func main() {
 	e := echo.New()
@@ -51,9 +60,25 @@ func main() {
 		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
+	// rooms connection
+	// key : room_id
+	// value : room_object consisting room_id and client list (map)
+	wsConnections.Init()
+
 	repository := repositories.NewRepository(psql, redis)
-	service := services.NewService(repository)
-	controllers.NewController(e, service)
+
+	httpService := services.NewHttpService(repository, &services.BaseService{})
+	websocketService := services.NewWebSocketService(repository, wsConnections, &services.BaseService{})
+
+	baseService := services.NewBaseService(websocketService, httpService)
+	baseService.WebSocketService = websocketService
+	baseService.HttpService = httpService
+
+	httpService = services.NewHttpService(repository, baseService)
+	websocketService = services.NewWebSocketService(repository, wsConnections, baseService)
+
+	controller := controllers.NewController(e, httpService, websocketService, repository)
+	websocket.NewWebSocketHandler(e, controller, wsConnections)
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
 }

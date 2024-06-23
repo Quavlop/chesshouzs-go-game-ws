@@ -89,30 +89,6 @@ func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, r
 	}
 }
 
-func LogErrorCallStack(c echo.Context) {
-	data := models.LogErrorCallStack{
-		Level:     "ERROR",
-		Type:      "INTERNAL",
-		RequestID: c.Get("request_id").(string),
-		Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
-		Message:   helpers.CaptureStackTrace(),
-		URI:       c.Request().URL.String(),
-	}
-
-	stringData, err := json.Marshal(data)
-	if err != nil {
-		message := "Failed to write response log : " + err.Error()
-		helpers.WriteErrLog(message)
-		log.Errorf(message)
-		return
-	}
-
-	message := string(stringData)
-	helpers.WriteErrLog(message)
-	helpers.WriteOutLog(message)
-	log.Errorf(message)
-}
-
 func PanicLogger(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		defer helpers.PanicRecover(c)
@@ -122,7 +98,7 @@ func PanicLogger(next echo.HandlerFunc) echo.HandlerFunc {
 func Logger(c echo.Context, requestBody []byte, responseBody []byte) {
 	data := LogRequest(c, requestBody)
 	if c.Response().Status >= 500 {
-		LogErrorCallStack(c)
+		helpers.LogErrorCallStack(c, nil)
 	}
 	LogResponse(c, data, responseBody)
 }

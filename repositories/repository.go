@@ -12,7 +12,7 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
-type repository struct {
+type Repository struct {
 	postgres *gorm.DB
 	redis    *redis.Client
 }
@@ -52,5 +52,5 @@ func ConnectRedis(r models.RedisConnection) (*redis.Client, error) {
 }
 
 func NewRepository(postgres *gorm.DB, redis *redis.Client) interfaces.Repository {
-	return &repository{postgres, redis}
+	return &Repository{postgres, redis}
 }
