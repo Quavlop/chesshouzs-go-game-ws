@@ -163,7 +163,25 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 		}, err
 	}
 
+	// auth middleware for websocket events
+	eventTypeParse := strings.Split(message.Event, ":")
+	if len(eventTypeParse) == 1 {
+		guestToken, _ := c.Get("guest").(string)
+		if guestToken != "" {
+			errAuth := errs.ERR_UNAUTHENTICATED
+			return models.WebSocketResponse{
+				Status: constants.WS_SERVER_RESPONSE_ERROR,
+				Data:   errAuth.Error(),
+			}, errAuth
+		}
+	}
+
 	c.Set("ws-event", message.Event)
+
+	user, ok := c.Get("user").(models.User)
+	if !ok {
+		user = models.User{}
+	}
 
 	// handler()'s argument contains the connection data which belongs to the request initiator.
 	response, err := handler(models.WebSocketClientData{
@@ -171,7 +189,7 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 		Token:      token,
 		Event:      message.Event,
 		Context:    &c,
-		User:       c.Get("user").(models.User),
+		User:       user,
 		Data:       message.Data,
 	})
 	if err != nil {

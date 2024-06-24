@@ -51,6 +51,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	}
 
 	// check if player is already in game
+	// TODO add validation for ingame database psql
 	if s.wsConnections.IsClientInRoom(constants.WS_ROOM_TYPE_GAME, user.ID.String()) {
 		return result, errs.ERR_PLAYER_IN_GAME
 	}
