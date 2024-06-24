@@ -151,7 +151,8 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.Conn, token string, connectionList *Connections, message models.WebSocketClientMessage) (models.WebSocketResponse, error) {
 	var response models.WebSocketResponse
 	var eventHandler = map[string]func(models.WebSocketClientData) (models.WebSocketResponse, error){
-		constants.WS_EVENT_INIT_MATCHMAKING: controller.HandleMatchmaking,
+		constants.WS_EVENT_INIT_MATCHMAKING:        controller.HandleMatchmaking,
+		constants.WS_EVENT_RESTORE_GAME_CONNECTION: nil,
 	}
 
 	handler, eventExists := eventHandler[message.Event]

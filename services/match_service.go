@@ -329,11 +329,22 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 	*/
 
 	/*
-		CASE 2 : player initiator is waiting for opponent then leaves page / refresh browser
-				(found matchup, enemy accepted after initiator leaves)
-			- delete game_active data
-			- delete move cache identifier (no need to delete redis player pool and data copy)
+		CASE 2 : found matchup (start game already)
+			Note :
+			- handle refresh (if possible, disable refresh)
+			- handle move to another page (if move to another page by manually url rewrite, then redirect back to the game url)
+			- disable going back to previous page
+			- game invalidation / end only occurs when one of the player either leave the game or win the game
+
+			Step to recover disconnection while game (run when init connection)
+			-> get game data (exists on the first step)
+			-> keep the room data (do not invalidate), but delete the old connection (i guess this is implemented already)
+			-> reinitialize connection, insert player to room again
 	*/
+
+	if user.ID == uuid.Nil {
+		return nil
+	}
 
 	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
 	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
@@ -410,15 +421,6 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 			return err
 		}
 		return nil
-	}
-
-	// delete move cache identifier
-	err = s.repository.DeleteMoveCacheIdentifier(models.MoveCache{
-		ID: currentGameData.MovesCacheRef,
-	}, nil)
-	if err != nil {
-		helpers.LogErrorCallStack(c, err)
-		return err
 	}
 
 	return nil
