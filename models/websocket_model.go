@@ -33,15 +33,27 @@ func (sm *SafeMap) GetLock() *sync.RWMutex {
 }
 
 func (sm *SafeMapClient) GetMap() map[string]*WebSocketClientConnection {
-	return sm.m.(map[string]*WebSocketClientConnection)
+	res, ok := sm.m.(map[string]*WebSocketClientConnection)
+	if !ok {
+		return nil
+	}
+	return res
 }
 
 func (sm *SafeMapGameRoom) GetMap() map[string]*GameRoom {
-	return sm.m.(map[string]*GameRoom)
+	res, ok := sm.m.(map[string]*GameRoom)
+	if !ok {
+		return nil
+	}
+	return res
 }
 
 func (sm *SafeMapRoomClient) GetMap() map[string]bool {
-	return sm.m.(map[string]bool)
+	res, ok := sm.m.(map[string]bool)
+	if !ok {
+		return nil
+	}
+	return res
 }
 
 func (sm *SafeMapClient) NewMap() {

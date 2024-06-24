@@ -226,6 +226,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		Type: constants.WS_ROOM_TYPE_GAME,
 	})
 
+	fmt.Println(room)
 	room.AddClient(client.User.ID.String())
 	room.AddClient(opponent.User.ID.String())
 

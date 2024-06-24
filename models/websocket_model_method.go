@@ -23,11 +23,11 @@ func (wsRoom *GameRoom) IsClientInRoom(token string) bool {
 }
 
 func (wsRoom *GameRoom) AddClient(token string) {
-	wsRoom.clients.GetLock().Lock()
-	defer wsRoom.clients.GetLock().Unlock()
 	if wsRoom.GetClients() == nil {
 		wsRoom.clients.NewMap()
 	}
+	wsRoom.clients.GetLock().Lock()
+	defer wsRoom.clients.GetLock().Unlock()
 	wsRoom.GetClients()[token] = true
 }
 
