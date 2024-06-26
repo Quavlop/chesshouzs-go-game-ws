@@ -47,6 +47,7 @@ type GameActiveData struct {
 	WhitePlayerID     uuid.UUID
 	BlackPlayerID     uuid.UUID
 	GameTypeVariantID uuid.UUID
+	RoomID            uuid.UUID
 	MovesCacheRef     uuid.UUID
 	Moves             string
 	IsDone            bool

@@ -198,13 +198,27 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		gameTypeVariantID = gameTypeVariant[0].ID
 	}
 
-	// insert to mysql
 	gameID := uuid.New()
+
+	room := s.wsConnections.CreateRoom(&models.GameRoom{
+		Type: constants.WS_ROOM_TYPE_GAME,
+	}, "")
+
+	room.AddClient(client.User.ID.String())
+	room.AddClient(opponent.User.ID.String())
+
+	// insert to mysql
+	roomID, err := uuid.Parse(room.GetRoomID())
+	if err != nil {
+		return result, err
+	}
+
 	err = s.repository.InsertGameData(models.GameActiveData{
 		ID:                gameID,
 		WhitePlayerID:     client.User.ID,
 		BlackPlayerID:     opponent.User.ID,
 		GameTypeVariantID: gameTypeVariantID,
+		RoomID:            roomID,
 		MovesCacheRef:     moveCacheID,
 		StartTime:         time.Now().Format(time.RFC3339),
 	})
@@ -220,15 +234,6 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 			ID: gameID.String(),
 		},
 	})
-
-	room := s.wsConnections.CreateRoom(&models.GameRoom{
-		Name: gameID.String(),
-		Type: constants.WS_ROOM_TYPE_GAME,
-	})
-
-	fmt.Println(room)
-	room.AddClient(client.User.ID.String())
-	room.AddClient(opponent.User.ID.String())
 
 	result.ID = gameID.String()
 
@@ -346,7 +351,7 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 		return nil
 	}
 
-	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	_, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
 	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
 		helpers.LogErrorCallStack(c, err)
 	}
@@ -424,4 +429,52 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 	}
 
 	return nil
+}
+
+func (s *webSocketService) HandleRecoverMatchSocketConnection(client models.WebSocketClientData, params models.HandleRecoverMatchSocketConnectionParams) (models.HandleRecoverMatchSocketConnectionResponse, error) {
+
+	/*
+		Step to recover disconnection while game (run when init connection)
+		-> get game data (exists on the first step)
+		-> keep the room data (do not invalidate), but delete the old connection (i guess this is implemented already)
+		-> reinitialize connection, insert player to room again
+
+
+		// CASE 1 : one player leaves, the other stays
+		- check if the room still exists
+		- if room still exists it means that the other stays,
+		- rejoin immediately by adding the connection to the room
+		- if room does not exist anymore, go to CASE 2
+
+
+		// CASE 2 : both player leaves
+		this cause the room to be deleted
+		- recreate the room with the room id from the currentGameData
+		- *the other clients will join this room
+	*/
+
+	var result models.HandleRecoverMatchSocketConnectionResponse
+	user := client.User
+
+	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		return result, err
+	}
+
+	gameRoom := s.wsConnections.GetRoomByID(currentGameData.RoomID.String())
+	if gameRoom == nil {
+		// CASE 2
+		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
+			Type: constants.WS_ROOM_TYPE_GAME,
+		}, currentGameData.RoomID.String())
+
+		gameRoom.AddClient(user.ID.String())
+
+		return result, err
+	}
+
+	// CASE 1
+	gameRoom.AddClient(user.ID.String())
+
+	return result, nil
 }

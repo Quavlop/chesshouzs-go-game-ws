@@ -106,7 +106,6 @@ type WebSocketResponse struct {
 
 type GameRoom struct {
 	id   string
-	Name string // METADATA
 	Type string // METADATA
 	// etc ...
 

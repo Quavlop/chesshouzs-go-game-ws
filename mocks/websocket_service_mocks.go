@@ -94,6 +94,21 @@ func (mr *MockWebsocketServiceMockRecorder) HandleMatchmaking(client, params int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMatchmaking", reflect.TypeOf((*MockWebsocketService)(nil).HandleMatchmaking), client, params)
 }
 
+// HandleRecoverMatchSocketConnection mocks base method.
+func (m *MockWebsocketService) HandleRecoverMatchSocketConnection(client models.WebSocketClientData, params models.HandleRecoverMatchSocketConnectionParams) (models.HandleRecoverMatchSocketConnectionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleRecoverMatchSocketConnection", client, params)
+	ret0, _ := ret[0].(models.HandleRecoverMatchSocketConnectionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HandleRecoverMatchSocketConnection indicates an expected call of HandleRecoverMatchSocketConnection.
+func (mr *MockWebsocketServiceMockRecorder) HandleRecoverMatchSocketConnection(client, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRecoverMatchSocketConnection", reflect.TypeOf((*MockWebsocketService)(nil).HandleRecoverMatchSocketConnection), client, params)
+}
+
 // IsMatchmakingEligible mocks base method.
 func (m *MockWebsocketService) IsMatchmakingEligible(player, opponent models.PlayerPool) bool {
 	m.ctrl.T.Helper()
@@ -217,6 +232,21 @@ func (m *MockMatchService) HandleMatchmaking(client models.WebSocketClientData, 
 func (mr *MockMatchServiceMockRecorder) HandleMatchmaking(client, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMatchmaking", reflect.TypeOf((*MockMatchService)(nil).HandleMatchmaking), client, params)
+}
+
+// HandleRecoverMatchSocketConnection mocks base method.
+func (m *MockMatchService) HandleRecoverMatchSocketConnection(client models.WebSocketClientData, params models.HandleRecoverMatchSocketConnectionParams) (models.HandleRecoverMatchSocketConnectionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleRecoverMatchSocketConnection", client, params)
+	ret0, _ := ret[0].(models.HandleRecoverMatchSocketConnectionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HandleRecoverMatchSocketConnection indicates an expected call of HandleRecoverMatchSocketConnection.
+func (mr *MockMatchServiceMockRecorder) HandleRecoverMatchSocketConnection(client, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRecoverMatchSocketConnection", reflect.TypeOf((*MockMatchService)(nil).HandleRecoverMatchSocketConnection), client, params)
 }
 
 // IsMatchmakingEligible mocks base method.

@@ -6,7 +6,6 @@ func (wsRoom *GameRoom) GetRoomID() string {
 
 func (wsRoom *GameRoom) GetRoomData() GameRoom {
 	return GameRoom{
-		Name: wsRoom.Name,
 		Type: wsRoom.Type,
 	}
 }

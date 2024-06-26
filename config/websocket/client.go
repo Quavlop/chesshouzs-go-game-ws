@@ -31,6 +31,13 @@ func (c *Connections) GetRooms() map[string]*models.GameRoom {
 	return c.gameRooms.GetMap()
 }
 
+func (c *Connections) GetRoomByID(id string) *models.GameRoom {
+	c.gameRooms.GetLock().RLock()
+	defer c.gameRooms.GetLock().RUnlock()
+	rooms := c.gameRooms.GetMap()
+	return rooms[id]
+}
+
 func (c *Connections) GetClientConnection(token string) *models.WebSocketClientConnection {
 	c.clients.GetLock().RLock()
 	defer c.clients.GetLock().RUnlock()
@@ -46,7 +53,6 @@ func (c *Connections) GetClientActiveRooms(token string) []models.GameRoom {
 	for _, room := range c.gameRooms.GetMap() {
 		if room.IsClientInRoom(token) {
 			rooms = append(rooms, models.GameRoom{
-				Name: room.Name,
 				Type: room.Type,
 			})
 		}
@@ -90,21 +96,33 @@ func (c *Connections) deleteConnection(token string, conn *ws.Conn) {
 
 	// delete from room connections
 	// c.gameRooms.GetLock().Lock()
-	for _, room := range c.GetRooms() {
-		delete(room.GetClients(), token)
+	rooms := c.GetRooms()
+	for _, room := range rooms {
+		roomClients := room.GetClients()
+		delete(roomClients, token)
+
+		if len(roomClients) <= 0 {
+			delete(rooms, room.GetRoomID())
+		}
 	}
 
 	c.clients.GetLock().Unlock()
 }
 
-func (c *Connections) CreateRoom(params *models.GameRoom) *models.GameRoom {
+func (c *Connections) CreateRoom(params *models.GameRoom, roomID string) *models.GameRoom {
 	c.gameRooms.NewMap()
 	c.gameRooms.GetLock().Lock()
 	defer c.gameRooms.GetLock().Unlock()
-	id := uuid.New()
+
 	connectionPoolRoom := c.gameRooms.GetMap()
-	connectionPoolRoom[id.String()] = params
-	return connectionPoolRoom[id.String()]
+
+	if roomID == "" {
+		id := uuid.New()
+		connectionPoolRoom[id.String()] = params
+		return connectionPoolRoom[id.String()]
+	}
+	connectionPoolRoom[roomID] = params
+	return connectionPoolRoom[roomID]
 }
 
 func (c *Connections) EmitOneOnOne(params models.WebSocketChannel) error {
