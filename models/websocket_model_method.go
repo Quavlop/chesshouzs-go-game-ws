@@ -4,6 +4,10 @@ func (wsRoom *GameRoom) GetRoomID() string {
 	return wsRoom.id
 }
 
+func (wsRoom *GameRoom) SetRoomID(id string) {
+	wsRoom.id = id
+}
+
 func (wsRoom *GameRoom) GetRoomData() GameRoom {
 	return GameRoom{
 		Type: wsRoom.Type,

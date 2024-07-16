@@ -119,8 +119,11 @@ func (c *Connections) CreateRoom(params *models.GameRoom, roomID string) *models
 	if roomID == "" {
 		id := uuid.New()
 		connectionPoolRoom[id.String()] = params
+		connectionPoolRoom[id.String()].SetRoomID(id.String())
 		return connectionPoolRoom[id.String()]
 	}
+
+	connectionPoolRoom[roomID].SetRoomID(roomID)
 	connectionPoolRoom[roomID] = params
 	return connectionPoolRoom[roomID]
 }
