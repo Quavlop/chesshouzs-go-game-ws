@@ -226,13 +226,14 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, err
 	}
 
-	s.wsConnections.EmitOneOnOne(models.WebSocketChannel{
+	s.wsConnections.EmitToRoom(models.WebSocketChannel{
 		Source:       client.User.ID.String(),
 		TargetClient: opponent.User.ID.String(),
 		Event:        constants.WS_EVENT_EMIT_START_GAME,
 		Data: models.GameData{
 			ID: gameID.String(),
 		},
+		TargetRoom: room.GetRoomID(),
 	})
 
 	result.ID = gameID.String()

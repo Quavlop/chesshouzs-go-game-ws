@@ -89,7 +89,12 @@ func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, conne
 					if err != nil {
 						isGuest = true
 					} else {
-						c.Set("user", user)
+						exp := claims["exp"].(float64)
+						if time.Now().Unix() > int64(exp) {
+							isGuest = true
+						} else {
+							c.Set("user", user)
+						}
 					}
 				}
 			}
