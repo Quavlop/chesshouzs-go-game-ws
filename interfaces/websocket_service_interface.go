@@ -12,7 +12,8 @@ type WebsocketService interface {
 
 type MatchService interface {
 	HandleMatchmaking(client models.WebSocketClientData, params models.HandleMatchmakingParams) (models.HandleMatchmakingResponse, error)
-	HandleRecoverMatchSocketConnection(client models.WebSocketClientData, params models.HandleRecoverMatchSocketConnectionParams) (models.HandleRecoverMatchSocketConnectionResponse, error)
+	HandleConnectMatchSocketConnection(client models.WebSocketClientData, params models.HandleConnectMatchSocketConnectionParams) (models.HandleConnectMatchSocketConnectionResponse, error)
+	HandleGamePublishAction(client models.WebSocketClientData, params models.HandleGamePublishActionParams) (models.HandleGamePublishActionResponse, error)
 	FilterEligibleOpponent(client models.WebSocketClientData, params models.FilterEligibleOpponentParams) (models.FilterEligibleOpponentResponse, error)
 	SortPlayerPool(client models.WebSocketClientData, pool []models.PlayerPool) ([]models.PlayerPool, error)
 	FilterOutOpponents(client models.WebSocketClientData, pool []models.PlayerPool) ([]models.PlayerPool, error)

@@ -123,8 +123,8 @@ func (c *Connections) CreateRoom(params *models.GameRoom, roomID string) *models
 		return connectionPoolRoom[id.String()]
 	}
 
-	connectionPoolRoom[roomID].SetRoomID(roomID)
 	connectionPoolRoom[roomID] = params
+	connectionPoolRoom[roomID].SetRoomID(roomID)
 	return connectionPoolRoom[roomID]
 }
 

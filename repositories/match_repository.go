@@ -125,15 +125,20 @@ func (r *Repository) InsertMoveCacheIdentifier(params models.MoveCache, pipe red
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 
+	var move string
+	if move == "" {
+		move = helpers.GameNotationBuilder(14)
+	}
+
 	var result *redis.BoolCmd
 	if pipe != nil {
 		result = pipe.HMSet(ctx, key, map[string]interface{}{
-			"move": "",
+			"move": move,
 			"turn": true,
 		})
 	} else {
 		result = r.redis.HMSet(ctx, key, map[string]interface{}{
-			"move": "",
+			"move": move,
 			"turn": true,
 		})
 	}

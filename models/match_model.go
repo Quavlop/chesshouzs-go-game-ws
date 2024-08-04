@@ -10,10 +10,18 @@ type HandleMatchmakingResponse struct {
 	Opponent PlayerMatchmakingResponse `json:"opponent"`
 }
 
-type HandleRecoverMatchSocketConnectionParams struct{}
+type HandleConnectMatchSocketConnectionParams struct{}
 
-type HandleRecoverMatchSocketConnectionResponse struct{}
+type HandleConnectMatchSocketConnectionResponse struct{}
 
+type HandleGamePublishActionParams struct {
+	State string `json:"state"`
+}
+
+type HandleGamePublishActionResponse struct {
+	State string `json:"state"`
+	Turn  bool   `json:"turn"`
+}
 type GameData struct {
 	ID string `json:"id"`
 }

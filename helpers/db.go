@@ -3,6 +3,7 @@ package helpers
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"ingenhouzs.com/chesshouzs/go-game/models"
@@ -27,4 +28,21 @@ func GetGameMoveCacheKey(params models.MoveCache) string {
 
 func GetPlayerPoolCloneKey(params models.PlayerPoolParams) string {
 	return "pool_player:" + params.User.ID.String()
+}
+
+func GameNotationBuilder(size int) string {
+	var notation string
+
+	firstLine := "rnbnbnkqnbnbnr"
+	secondLine := "ppnbpprrppbnpp"
+	thirdLine := "pppppppppppppp"
+
+	notation = notation + firstLine + "|" + secondLine + "|" + thirdLine
+
+	for i := 3; i < size-3; i++ {
+		notation += "|.............."
+	}
+
+	notation = notation + "|" + strings.ToUpper(thirdLine) + "|" + strings.ToUpper(secondLine) + "|" + strings.ToUpper(firstLine)
+	return notation
 }

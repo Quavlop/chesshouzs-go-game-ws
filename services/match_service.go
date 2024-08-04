@@ -202,23 +202,23 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 	room := s.wsConnections.CreateRoom(&models.GameRoom{
 		Type: constants.WS_ROOM_TYPE_GAME,
-	}, "")
+	}, gameID.String())
 
 	room.AddClient(client.User.ID.String())
 	room.AddClient(opponent.User.ID.String())
 
 	// insert to mysql
-	roomID, err := uuid.Parse(room.GetRoomID())
-	if err != nil {
-		return result, err
-	}
+	// roomID, err := uuid.Parse(room.GetRoomID())
+	// if err != nil {
+	// 	return result, err
+	// }
 
 	err = s.repository.InsertGameData(models.GameActiveData{
 		ID:                gameID,
 		WhitePlayerID:     client.User.ID,
 		BlackPlayerID:     opponent.User.ID,
 		GameTypeVariantID: gameTypeVariantID,
-		RoomID:            roomID,
+		RoomID:            gameID,
 		MovesCacheRef:     moveCacheID,
 		StartTime:         time.Now().Format(time.RFC3339),
 	})
@@ -366,6 +366,7 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 			},
 		})
 		fmt.Println("C 1")
+
 		if err != nil {
 			fmt.Println(err.Error())
 			return err
@@ -432,7 +433,7 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 	return nil
 }
 
-func (s *webSocketService) HandleRecoverMatchSocketConnection(client models.WebSocketClientData, params models.HandleRecoverMatchSocketConnectionParams) (models.HandleRecoverMatchSocketConnectionResponse, error) {
+func (s *webSocketService) HandleConnectMatchSocketConnection(client models.WebSocketClientData, params models.HandleConnectMatchSocketConnectionParams) (models.HandleConnectMatchSocketConnectionResponse, error) {
 
 	/*
 		Step to recover disconnection while game (run when init connection)
@@ -454,7 +455,7 @@ func (s *webSocketService) HandleRecoverMatchSocketConnection(client models.WebS
 		- *the other clients will join this room
 	*/
 
-	var result models.HandleRecoverMatchSocketConnectionResponse
+	var result models.HandleConnectMatchSocketConnectionResponse
 	user := client.User
 
 	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
@@ -462,12 +463,12 @@ func (s *webSocketService) HandleRecoverMatchSocketConnection(client models.WebS
 		return result, err
 	}
 
-	gameRoom := s.wsConnections.GetRoomByID(currentGameData.RoomID.String())
+	gameRoom := s.wsConnections.GetRoomByID(currentGameData.ID.String())
 	if gameRoom == nil {
 		// CASE 2
 		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
 			Type: constants.WS_ROOM_TYPE_GAME,
-		}, currentGameData.RoomID.String())
+		}, currentGameData.ID.String())
 
 		gameRoom.AddClient(user.ID.String())
 
@@ -478,4 +479,60 @@ func (s *webSocketService) HandleRecoverMatchSocketConnection(client models.WebS
 	gameRoom.AddClient(user.ID.String())
 
 	return result, nil
+}
+
+func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClientData, params models.HandleGamePublishActionParams) (models.HandleGamePublishActionResponse, error) {
+
+	user := client.User
+
+	game, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	// TODO : validate new state
+
+	// if client color identifier is black then make turn true for white
+	// true -> white
+	// false -> black
+	err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
+		ID:   game.MovesCacheRef,
+		Move: params.State,
+		Turn: user.ID == game.BlackPlayerID,
+	}, nil)
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	var opponentID string
+	if user.ID == game.BlackPlayerID {
+		opponentID = game.WhitePlayerID.String()
+	} else {
+		opponentID = game.BlackPlayerID.String()
+	}
+
+	gameRoom := s.wsConnections.GetRoomByID(game.ID.String())
+	if gameRoom == nil {
+		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
+			Type: constants.WS_ROOM_TYPE_GAME,
+		}, game.ID.String())
+	}
+
+	gameRoom.AddClient(user.ID.String())
+
+	s.wsConnections.EmitToRoom(models.WebSocketChannel{
+		Source:       user.ID.String(),
+		TargetClient: opponentID,
+		Event:        constants.WS_EVENT_EMIT_UPDATE_GAME_STATE,
+		Data: models.HandleGamePublishActionResponse{
+			State: params.State,
+			Turn:  user.ID == game.BlackPlayerID,
+		},
+		TargetRoom: gameRoom.GetRoomID(),
+	})
+
+	return models.HandleGamePublishActionResponse{
+		State: params.State,
+	}, nil
 }

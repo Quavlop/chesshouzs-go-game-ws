@@ -39,6 +39,7 @@ type GameTypeVariant struct {
 
 type MoveCache struct {
 	ID   uuid.UUID
+	Move string
 	Turn bool
 }
 
