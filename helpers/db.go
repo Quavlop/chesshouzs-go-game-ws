@@ -44,5 +44,6 @@ func GameNotationBuilder(size int) string {
 	}
 
 	notation = notation + "|" + strings.ToUpper(thirdLine) + "|" + strings.ToUpper(secondLine) + "|" + strings.ToUpper(firstLine)
+	notation = strings.TrimSuffix(notation, "|")
 	return notation
 }

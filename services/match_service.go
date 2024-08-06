@@ -172,7 +172,8 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 		// insert game cache move ref to redis
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-			ID: moveCacheID,
+			ID:   moveCacheID,
+			Turn: true,
 		}, pipe)
 		if err != nil {
 			return err

@@ -158,7 +158,7 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 	var eventHandler = map[string]func(models.WebSocketClientData) (models.WebSocketResponse, error){
 		constants.WS_EVENT_INIT_MATCHMAKING:    controller.HandleMatchmaking,
 		constants.WS_EVENT_CONNECT_GAME:        controller.HandleConnectMatchSocketConnection,
-		constants.WS_EVENT_GAME_PUBLISH_ACTION: nil,
+		constants.WS_EVENT_GAME_PUBLISH_ACTION: controller.HandleGamePublishAction,
 	}
 
 	handler, eventExists := eventHandler[message.Event]
