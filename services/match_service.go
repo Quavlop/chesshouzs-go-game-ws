@@ -492,6 +492,11 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
+	// a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
+	// if err != nil {
+	// 	return models.HandleGamePublishActionResponse{}, err
+	// }
+
 	// TODO : validate new state
 
 	// if client color identifier is black then make turn true for white

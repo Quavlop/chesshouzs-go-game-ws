@@ -1,0 +1,11 @@
+syntax="proto3"; 
+
+package pb;
+
+import "match_service_model.proto";
+
+option go_package="../pb";
+
+service MatchService {
+    rpc ValidateMove(ValidateMoveReq) returns (ValidateMoveResp);
+}

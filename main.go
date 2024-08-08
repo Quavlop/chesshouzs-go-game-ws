@@ -60,6 +60,11 @@ func main() {
 		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
 	}
 
+	rpcClient, err := services.NewRpcClient(os.Getenv("RPC_SERVER"))
+	if err != nil {
+		e.Logger.Fatal("Failed to create rpc client : " + err.Error())
+	}
+
 	// rooms connection
 	// key : room_id
 	// value : room_object consisting room_id and client list (map)
@@ -67,15 +72,15 @@ func main() {
 
 	repository := repositories.NewRepository(psql, redis)
 
-	httpService := services.NewHttpService(repository, &services.BaseService{})
-	websocketService := services.NewWebSocketService(repository, wsConnections, &services.BaseService{})
+	httpService := services.NewHttpService(repository, &services.BaseService{}, &rpcClient)
+	websocketService := services.NewWebSocketService(repository, wsConnections, &services.BaseService{}, &rpcClient)
 
 	baseService := services.NewBaseService(websocketService, httpService)
 	baseService.WebSocketService = websocketService
 	baseService.HttpService = httpService
 
-	httpService = services.NewHttpService(repository, baseService)
-	websocketService = services.NewWebSocketService(repository, wsConnections, baseService)
+	httpService = services.NewHttpService(repository, baseService, &rpcClient)
+	websocketService = services.NewWebSocketService(repository, wsConnections, baseService, &rpcClient)
 
 	controller := controllers.NewController(e, httpService, websocketService, repository)
 	websocket.NewWebSocketHandler(e, controller, wsConnections)

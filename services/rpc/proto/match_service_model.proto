@@ -1,0 +1,14 @@
+syntax="proto3";
+
+package pb; 
+
+option go_package="../pb";
+
+message ValidateMoveReq {
+    string oldState = 1;
+    string newState = 2;
+}
+
+message ValidateMoveResp {
+    bool valid = 1;
+}
