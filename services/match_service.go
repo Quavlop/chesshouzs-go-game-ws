@@ -15,6 +15,7 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
+	"ingenhouzs.com/chesshouzs/go-game/services/rpc/pb"
 )
 
 // Websocket services
@@ -492,10 +493,14 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
-	// a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
-	// if err != nil {
-	// 	return models.HandleGamePublishActionResponse{}, err
-	// }
+	a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	if !a.Valid {
+		return models.HandleGamePublishActionResponse{}, errs.ERR_INVALID_MOVE
+	}
 
 	// TODO : validate new state
 
