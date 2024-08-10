@@ -1,7 +1,11 @@
 package services
 
 import (
+	"context"
+	"time"
+
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"ingenhouzs.com/chesshouzs/go-game/config/websocket"
 	"ingenhouzs.com/chesshouzs/go-game/interfaces"
 	"ingenhouzs.com/chesshouzs/go-game/services/rpc/pb"
@@ -47,7 +51,13 @@ func NewWebSocketService(repository interfaces.Repository, wsConnections *websoc
 func NewRpcClient(serverHost string) (rpcClient, error) {
 	var client rpcClient
 
-	conn, err := grpc.Dial(serverHost, grpc.WithInsecure(), grpc.WithBlock())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := grpc.DialContext(ctx, serverHost,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
 	if err != nil {
 		return client, err
 	}
