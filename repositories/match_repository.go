@@ -288,3 +288,48 @@ func (r *Repository) DeleteMoveCacheIdentifier(params models.MoveCache, pipe red
 
 	return nil
 }
+
+func (r *Repository) InsertMatchSkillCount(params models.InitMatchSkillStats, pipe redis.Pipeliner) error {
+	key := helpers.GetPlayerMatchSkillState(params)
+
+	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+
+	var args []interface{}
+	for _, skill := range params.GameSkills {
+		args = append(args, skill.ID.String(), skill.UsageCount)
+	}
+
+	var result *redis.BoolCmd
+	if pipe != nil {
+		result = pipe.HMSet(ctx, key, args...)
+	} else {
+		result = r.redis.HMSet(ctx, key, args...)
+	}
+	if err := result.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteMatchSkillCount(params models.InitMatchSkillStats, pipe redis.Pipeliner) error {
+	key := helpers.GetPlayerMatchSkillState(params)
+
+	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+
+	var result *redis.IntCmd
+	if pipe != nil {
+		result = pipe.Del(ctx, key)
+	} else {
+		result = r.redis.Del(ctx, key)
+	}
+	if err := result.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}

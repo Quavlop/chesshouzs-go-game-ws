@@ -43,6 +43,11 @@ type MoveCache struct {
 	Turn bool
 }
 
+type InitMatchSkillStats struct {
+	ID         uuid.UUID
+	GameSkills []GameSkill
+}
+
 type GameActiveData struct {
 	ID                uuid.UUID
 	WhitePlayerID     uuid.UUID
@@ -60,4 +65,20 @@ type GameActiveData struct {
 type EloBounds struct {
 	Upper int32
 	Lower int32
+}
+
+type GameSkill struct {
+	ID               uuid.UUID
+	Name             string
+	Description      string
+	ForSelf          bool
+	ForEnemy         bool
+	RadiusX          int
+	RadiusY          int
+	AutoTrigger      bool
+	Duration         int
+	UsageCount       int
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	CurrentUserCount int `gorm:"-"`
 }

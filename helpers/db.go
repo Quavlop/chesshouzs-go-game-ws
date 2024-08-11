@@ -30,6 +30,10 @@ func GetPlayerPoolCloneKey(params models.PlayerPoolParams) string {
 	return "pool_player:" + params.User.ID.String()
 }
 
+func GetPlayerMatchSkillState(params models.InitMatchSkillStats) string {
+	return "player_match_skill:" + params.ID.String()
+}
+
 func GameNotationBuilder(size int) string {
 	var notation string
 

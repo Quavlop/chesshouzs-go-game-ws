@@ -27,6 +27,8 @@ type MatchRepository interface {
 	DeletePlayerOnPoolDataToRedis(params models.PlayerPoolParams, joinTime time.Time, pipe redis.Pipeliner) error
 	GetPlayerPoolData(params models.PlayerPoolParams) (map[string]string, error)
 	GetPlayerCurrentGameState(token string) (models.GameActiveData, error)
+	InsertMatchSkillCount(params models.InitMatchSkillStats, pipe redis.Pipeliner) error
+	DeleteMatchSkillCount(params models.InitMatchSkillStats, pipe redis.Pipeliner) error
 }
 
 type UserRepository interface {
@@ -35,6 +37,7 @@ type UserRepository interface {
 
 type GameRepository interface {
 	GetGameTypeVariant(params models.GameTypeVariant) ([]models.GameTypeVariant, error)
+	GetGameSkills(params models.GameSkill) ([]models.GameSkill, error)
 }
 
 type Transaction interface {

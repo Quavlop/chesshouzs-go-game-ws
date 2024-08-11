@@ -128,6 +128,12 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, nil
 	}
 
+	skills, err := s.repository.GetGameSkills(models.GameSkill{})
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return result, err
+	}
+
 	// if found match then remove the enemy from pool and insert both into game data
 	opponent := eligibleOpponents.Player
 	result.Opponent = models.PlayerMatchmakingResponse{
@@ -175,6 +181,14 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID:   moveCacheID,
 			Turn: true,
+		}, pipe)
+		if err != nil {
+			return err
+		}
+
+		err = s.repository.InsertMatchSkillCount(models.InitMatchSkillStats{
+			ID:         user.ID,
+			GameSkills: skills,
 		}, pipe)
 		if err != nil {
 			return err
@@ -383,8 +397,6 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 			Type:        playerPoolData["game-type"],
 			TimeControl: playerPoolData["game-time-control"],
 		})
-		fmt.Println(poolKey)
-		fmt.Println(poolPlayerCloneKey)
 
 		err = s.repository.WithRedisTrx(c.Request().Context(), []string{poolKey, poolPlayerCloneKey}, func(pipe redis.Pipeliner) error {
 
@@ -394,10 +406,14 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 					ID: user.ID,
 				},
 			}, time.Time{}, pipe)
-			fmt.Println("C 2")
 			if err != nil {
-				fmt.Println(err.Error())
+				return err
+			}
 
+			err = s.repository.DeleteMatchSkillCount(models.InitMatchSkillStats{
+				ID: user.ID,
+			}, pipe)
+			if err != nil {
 				return err
 			}
 
@@ -416,10 +432,8 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 					JoinTime: joinTime,
 				},
 			}, pipe)
-			fmt.Println("C 3")
 			if err != nil {
 				fmt.Println(err.Error())
-
 				return err
 			}
 
