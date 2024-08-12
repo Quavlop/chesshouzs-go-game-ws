@@ -194,6 +194,13 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 			return err
 		}
 
+		err = s.repository.InsertMatchSkillCount(models.InitMatchSkillStats{
+			ID:         opponent.User.ID,
+			GameSkills: skills,
+		}, pipe)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
