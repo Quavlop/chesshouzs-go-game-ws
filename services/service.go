@@ -2,12 +2,18 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"ingenhouzs.com/chesshouzs/go-game/config/websocket"
+	"ingenhouzs.com/chesshouzs/go-game/constants"
+	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/interfaces"
+	"ingenhouzs.com/chesshouzs/go-game/models"
 	"ingenhouzs.com/chesshouzs/go-game/services/rpc/pb"
 )
 
@@ -34,6 +40,20 @@ type gameRoomService struct {
 
 type rpcClient struct {
 	MatchServiceRpc pb.MatchServiceClient
+}
+
+type KafkaConsumerConfig struct {
+	Host            string
+	GroupId         string
+	Topics          []string
+	AutoOffsetReset string
+}
+
+type kafkaConsumer struct {
+	context       context.Context
+	repository    interfaces.Repository
+	wsConnections *websocket.Connections
+	BaseService   *BaseService
 }
 
 func NewBaseService(webSocketService interfaces.WebsocketService, httpService interfaces.HttpService) *BaseService {
@@ -68,4 +88,53 @@ func NewRpcClient(serverHost string) (rpcClient, error) {
 	}
 
 	return client, nil
+}
+
+func NewKafkaImpl(repository interfaces.Repository, wsConnections *websocket.Connections, service *BaseService, c context.Context) kafkaConsumer {
+	return kafkaConsumer{
+		context:       c,
+		repository:    repository,
+		wsConnections: wsConnections,
+		BaseService:   service,
+	}
+}
+
+func NewKafkaConsumer(config KafkaConsumerConfig, kafkaImpl kafkaConsumer) {
+	c, err := kafka.NewConsumer(&kafka.ConfigMap{
+		"bootstrap.servers": config.Host,
+		"group.id":          config.GroupId,
+		"auto.offset.reset": config.AutoOffsetReset,
+	})
+	if err != nil {
+		helpers.WriteOutLog("[KAFKA CONSUMER] Error connecting kafka : " + err.Error())
+		panic(err)
+	}
+	defer c.Close()
+
+	c.SubscribeTopics(config.Topics, nil)
+
+	for {
+		msg, err := c.ReadMessage(-1)
+		if err != nil {
+			continue
+		}
+
+		var consumerErr error
+		switch *msg.TopicPartition.Topic {
+		case constants.EXECUTE_SKILL_TOPIC:
+			var message models.ExecuteSkillMessage
+			fmt.Println(msg.Value)
+			fmt.Println(string(msg.Value))
+			err := json.Unmarshal(msg.Value, &message)
+			fmt.Println(message)
+			if err != nil {
+				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Failed to parse message on topic %s : %s", *&msg.TopicPartition.Topic, err.Error()))
+				continue
+			}
+			consumerErr = kafkaImpl.ExecuteSkillConsumer(message)
+			if consumerErr != nil {
+				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Error when consuming message on topic %s : %s", *msg.TopicPartition.Topic, consumerErr.Error()))
+			}
+		}
+	}
 }

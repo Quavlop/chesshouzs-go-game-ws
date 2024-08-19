@@ -44,8 +44,9 @@ type MoveCache struct {
 }
 
 type InitMatchSkillStats struct {
-	ID         uuid.UUID
-	GameSkills []GameSkill
+	ID           uuid.UUID
+	GameSkills   []GameSkill
+	GameSkillMap map[string]int
 }
 
 type GameActiveData struct {
@@ -81,4 +82,8 @@ type GameSkill struct {
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	CurrentUserCount int `gorm:"-"`
+}
+
+type SkillUsageCount struct {
+	ID uuid.UUID
 }

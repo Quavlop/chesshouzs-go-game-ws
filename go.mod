@@ -3,6 +3,7 @@ module ingenhouzs.com/chesshouzs/go-game
 go 1.21.4
 
 require (
+	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0

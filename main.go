@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"os"
+	"strconv"
+	"strings"
 
 	_ "net/http/pprof"
 
@@ -84,6 +87,22 @@ func main() {
 
 	controller := controllers.NewController(e, httpService, websocketService, repository)
 	websocket.NewWebSocketHandler(e, controller, wsConnections)
+
+	kafkaImpl := services.NewKafkaImpl(repository, wsConnections, baseService, context.Background())
+
+	consumerWorker, err := strconv.Atoi(os.Getenv("KAFKA_CONSUMER_WORKER"))
+	if err != nil {
+		consumerWorker = 3
+	}
+
+	for i := 0; i < consumerWorker; i++ {
+		go services.NewKafkaConsumer(services.KafkaConsumerConfig{
+			Host:            os.Getenv("KAFKA_HOST"),
+			GroupId:         os.Getenv("KAFKA_CONSUMER_GROUP_ID"),
+			Topics:          strings.Split(os.Getenv("KAFKA_TOPICS"), ","),
+			AutoOffsetReset: os.Getenv("KAFKA_CONFIG_AUTO_OFFSET_RESET"),
+		}, kafkaImpl)
+	}
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
 }

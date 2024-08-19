@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]models.PlayerPool, error) {
 	var data []models.PlayerPool
 	key := helpers.GetPoolKey(params)
-	fmt.Println(key)
 
 	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
@@ -34,7 +32,6 @@ func (r *Repository) GetUnderMatchmakingPlayers(params models.PoolParams) ([]mod
 
 	for _, player := range pool {
 		var playerData models.PlayerPool
-		fmt.Println(player)
 		if err := json.Unmarshal([]byte(player), &playerData); err != nil {
 			return data, err
 		}
@@ -100,8 +97,6 @@ func (r *Repository) DeletePlayerFromPool(params models.PlayerPoolParams, pipe r
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(string(data))
 
 	var result *redis.IntCmd
 	if pipe != nil {
@@ -297,8 +292,14 @@ func (r *Repository) InsertMatchSkillCount(params models.InitMatchSkillStats, pi
 	defer cancel()
 
 	var args []interface{}
-	for _, skill := range params.GameSkills {
-		args = append(args, skill.ID.String(), skill.UsageCount)
+	if len(params.GameSkillMap) > 0 {
+		for key, val := range params.GameSkillMap {
+			args = append(args, key, val)
+		}
+	} else {
+		for _, skill := range params.GameSkills {
+			args = append(args, skill.ID.String(), skill.UsageCount)
+		}
 	}
 
 	var result *redis.BoolCmd
@@ -332,4 +333,34 @@ func (r *Repository) DeleteMatchSkillCount(params models.InitMatchSkillStats, pi
 	}
 
 	return nil
+}
+
+func (r *Repository) GetPlayerSkillCountUsageData(params models.InitMatchSkillStats) (map[string]int, error) {
+	var intResult map[string]int
+	key := helpers.GetPlayerMatchSkillState(params)
+
+	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+
+	result, err := r.redis.HGetAll(ctx, key).Result()
+	if err != nil {
+		return intResult, err
+	}
+
+	if len(result) <= 0 {
+		return intResult, errs.ERR_REDIS_DATA_NOT_FOUND
+	}
+
+	// Convert map[string]string to map[string]int
+	intResult = make(map[string]int, len(result))
+	for field, value := range result {
+		intValue, err := strconv.Atoi(value)
+		if err != nil {
+			return intResult, err
+		}
+		intResult[field] = intValue
+	}
+
+	return intResult, nil
 }

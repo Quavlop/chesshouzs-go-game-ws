@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -15,7 +14,6 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
-	"ingenhouzs.com/chesshouzs/go-game/services/rpc/pb"
 )
 
 // Websocket services
@@ -388,10 +386,8 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 				ID: user.ID,
 			},
 		})
-		fmt.Println("C 1")
 
 		if err != nil {
-			fmt.Println(err.Error())
 			return err
 		}
 
@@ -440,7 +436,6 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 				},
 			}, pipe)
 			if err != nil {
-				fmt.Println(err.Error())
 				return err
 			}
 
@@ -514,14 +509,14 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
-	a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
-	if err != nil {
-		return models.HandleGamePublishActionResponse{}, err
-	}
+	// a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
+	// if err != nil {
+	// 	return models.HandleGamePublishActionResponse{}, err
+	// }
 
-	if !a.Valid {
-		return models.HandleGamePublishActionResponse{}, errs.ERR_INVALID_MOVE
-	}
+	// if !a.Valid {
+	// 	return models.HandleGamePublishActionResponse{}, errs.ERR_INVALID_MOVE
+	// }
 
 	// TODO : validate new state
 

@@ -29,6 +29,7 @@ type MatchRepository interface {
 	GetPlayerCurrentGameState(token string) (models.GameActiveData, error)
 	InsertMatchSkillCount(params models.InitMatchSkillStats, pipe redis.Pipeliner) error
 	DeleteMatchSkillCount(params models.InitMatchSkillStats, pipe redis.Pipeliner) error
+	GetPlayerSkillCountUsageData(params models.InitMatchSkillStats) (map[string]int, error)
 }
 
 type UserRepository interface {
