@@ -5,6 +5,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
+	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
@@ -24,6 +25,13 @@ func (s *kafkaConsumer) ExecuteSkillConsumer(message models.ExecuteSkillMessage)
 	if err != nil {
 		return err
 	}
+
+	skillUsage := skill[message.SkillId.String()]
+	if skillUsage <= 0 {
+		return errs.ERR_UNAVAILABLE_SKILL_COUNT
+	}
+
+	skill[message.SkillId.String()] = skillUsage - 1
 
 	var opponentID uuid.UUID
 	if message.ExecutorUserId == game.BlackPlayerID {

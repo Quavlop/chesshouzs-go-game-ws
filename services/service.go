@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -119,14 +120,18 @@ func NewKafkaConsumer(config KafkaConsumerConfig, kafkaImpl kafkaConsumer) {
 			continue
 		}
 
+		rawMessage := string(msg.Value)
+		cleanedMessage, err := strconv.Unquote(rawMessage)
+		if err != nil {
+			helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Failed to unescape message on topic %s : %s", *&msg.TopicPartition.Topic, err.Error()))
+			continue
+		}
+
 		var consumerErr error
 		switch *msg.TopicPartition.Topic {
 		case constants.EXECUTE_SKILL_TOPIC:
 			var message models.ExecuteSkillMessage
-			fmt.Println(msg.Value)
-			fmt.Println(string(msg.Value))
-			err := json.Unmarshal(msg.Value, &message)
-			fmt.Println(message)
+			err := json.Unmarshal([]byte(cleanedMessage), &message)
 			if err != nil {
 				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Failed to parse message on topic %s : %s", *&msg.TopicPartition.Topic, err.Error()))
 				continue

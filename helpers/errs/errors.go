@@ -21,4 +21,5 @@ var (
 	ERR_INVALID_MOVE              = errors.New("invalid move")
 	ERR_GAME_DATA_NOT_FOUND       = errors.New("game data not found")
 	ERR_GAME_SKILL_DATA_NOT_FOUND = errors.New("game skill data not found")
+	ERR_UNAVAILABLE_SKILL_COUNT   = errors.New("skill cannot be used anymore")
 )
