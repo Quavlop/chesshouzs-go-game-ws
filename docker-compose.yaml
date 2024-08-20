@@ -60,7 +60,20 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
     networks:
-      - app      
+      - app  
+  cassandra:
+    image: cassandra:latest
+    container_name: cassandra
+    ports:
+      - "9042:9042"  
+    volumes:
+      - /var/lib/cassandra:/var/lib/cassandra 
+    environment:
+      - CASSANDRA_CLUSTER_NAME=cluster-1
+      - CASSANDRA_DC=dc-1
+      - CASSANDRA_RACK=rack-1    
+    networks:
+      - app
 
 networks:
   app:
