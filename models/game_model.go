@@ -79,6 +79,8 @@ type GameSkill struct {
 	AutoTrigger      bool
 	Duration         int
 	UsageCount       int
+	Type             string
+	Permanent        bool
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	CurrentUserCount int `gorm:"-"`

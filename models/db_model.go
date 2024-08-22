@@ -21,4 +21,9 @@ type RedisConnection struct {
 	Database int
 }
 
+type CassandraConnection struct {
+	Keyspace string
+	Host     string
+}
+
 type ElasticConnection struct{}

@@ -364,3 +364,61 @@ func (r *Repository) GetPlayerSkillCountUsageData(params models.InitMatchSkillSt
 
 	return intResult, nil
 }
+
+func (r *Repository) GetPlayerState(params models.PlayerState) (models.PlayerState, error) {
+	query := `
+		SELECT player_id, game_id, buff_state, debuff_state
+		FROM chesshouzs.player_game_states
+		WHERE player_id = ? AND game_id = ?
+	`
+
+	var playerState models.PlayerState
+
+	err := r.cassandra.
+		Query(query, params.PlayerID, params.GameID).
+		Scan(&playerState.PlayerID, &playerState.GameID, &playerState.BuffState, &playerState.DebuffState)
+	if err != nil {
+		return models.PlayerState{}, err
+	}
+
+	return playerState, nil
+}
+
+func (r *Repository) InsertPlayerState(params models.PlayerState) error {
+
+	query := `
+		INSERT INTO chesshouzs.player_game_states (
+			player_id, 
+			game_id, 
+			buff_state, 
+			debuff_state
+		) VALUES (?, ?, ?, ?)
+	`
+
+	err := r.cassandra.
+		Query(query, params.PlayerID, params.GameID, params.BuffState, params.DebuffState).
+		Exec()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdatePlayerState(params models.PlayerState) error {
+
+	query := `
+		UPDATE chesshouzs.player_game_states
+		SET buff_state = ?, debuff_state = ?
+		WHERE player_id = ? AND game_id = ?
+	`
+
+	err := r.cassandra.
+		Query(query, params.BuffState, params.DebuffState, params.PlayerID, params.GameID).
+		Exec()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

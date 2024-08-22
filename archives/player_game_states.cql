@@ -13,15 +13,11 @@ CREATE TYPE chesshouzs.state (
     list LIST<FROZEN<skill_status>>
 );
 
-CREATE TYPE chesshouzs.skill_category (
-    state MAP<TEXT, FROZEN<state>>
-);
-
 -- Create the table
 CREATE TABLE chesshouzs.player_game_states (
     player_id TEXT,
     game_id TEXT,
-    buff_state FROZEN<state>,
-    debuff_state FROZEN<state>,
+    buff_state MAP<TEXT, FROZEN<state>>,
+    debuff_state MAP<TEXT, FROZEN<state>>,
     PRIMARY KEY ((player_id, game_id))
 );

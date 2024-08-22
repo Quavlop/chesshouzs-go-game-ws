@@ -152,6 +152,44 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 	poolCloneKey := helpers.GetPlayerPoolCloneKey(poolParams)
 
+	gameID := uuid.New()
+
+	defaultBuffSkillState := make(map[string]models.SkillState)
+	defaultDebuffSkillState := make(map[string]models.SkillState)
+
+	for _, skill := range skills {
+		if skill.Type == constants.SKILL_TYPE_BUFF && !skill.Permanent {
+			defaultBuffSkillState[skill.Name] = models.SkillState{
+				DurationLeft: 0,
+				List:         []models.SkillStatus{},
+			}
+		} else if skill.Type == constants.SKILL_TYPE_DEBUFF && !skill.Permanent {
+			defaultDebuffSkillState[skill.Name] = models.SkillState{
+				DurationLeft: 0,
+				List:         []models.SkillStatus{},
+			}
+		}
+	}
+
+	// insert player state
+	state := models.PlayerState{
+		PlayerID:    user.ID.String(),
+		GameID:      gameID.String(),
+		BuffState:   defaultBuffSkillState,
+		DebuffState: defaultDebuffSkillState,
+	}
+
+	err = s.repository.InsertPlayerState(state)
+	if err != nil {
+		return result, err
+	}
+
+	state.PlayerID = opponent.User.ID.String()
+	err = s.repository.InsertPlayerState(state)
+	if err != nil {
+		return result, err
+	}
+
 	// TODO : remove duplicate param definition below and above
 	err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{redisPoolKey, poolCloneKey, moveCacheKey}, func(pipe redis.Pipeliner) error {
 		err = s.repository.DeletePlayerFromPool(models.PlayerPoolParams{
@@ -218,8 +256,6 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	if len(gameTypeVariant) > 0 {
 		gameTypeVariantID = gameTypeVariant[0].ID
 	}
-
-	gameID := uuid.New()
 
 	room := s.wsConnections.CreateRoom(&models.GameRoom{
 		Type: constants.WS_ROOM_TYPE_GAME,
@@ -523,6 +559,63 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 	// if client color identifier is black then make turn true for white
 	// true -> white
 	// false -> black
+
+	var opponentID uuid.UUID
+	if game.WhitePlayerID == user.ID {
+		opponentID = game.BlackPlayerID
+	} else {
+		opponentID = game.WhitePlayerID
+	}
+
+	playerState, err := s.repository.GetPlayerState(models.PlayerState{
+		PlayerID: user.ID.String(),
+		GameID:   game.ID.String(),
+	})
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	// decrement all skill state duration by one
+	if len(playerState.BuffState) > 0 {
+		for name, skill := range playerState.BuffState {
+			if skill.DurationLeft > 0 {
+				skill.DurationLeft -= 1
+			}
+			for i, effects := range skill.List {
+				if effects.DurationLeft > 0 {
+					skill.List[i].DurationLeft -= 1
+				}
+			}
+			playerState.BuffState[name] = skill
+		}
+	}
+
+	if len(playerState.DebuffState) > 0 {
+		for name, skill := range playerState.DebuffState {
+			if skill.DurationLeft > 0 {
+				skill.DurationLeft -= 1
+			}
+			for i, effects := range skill.List {
+				if effects.DurationLeft > 0 {
+					skill.List[i].DurationLeft -= 1
+				}
+			}
+			playerState.DebuffState[name] = skill
+		}
+	}
+
+	if len(playerState.BuffState) > 0 || len(playerState.DebuffState) > 0 {
+		err = s.repository.UpdatePlayerState(models.PlayerState{
+			PlayerID:    user.ID.String(),
+			GameID:      game.ID.String(),
+			BuffState:   playerState.BuffState,
+			DebuffState: playerState.DebuffState,
+		})
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+	}
+
 	err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 		ID:   game.MovesCacheRef,
 		Move: params.State,
@@ -530,13 +623,6 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 	}, nil)
 	if err != nil {
 		return models.HandleGamePublishActionResponse{}, err
-	}
-
-	var opponentID string
-	if user.ID == game.BlackPlayerID {
-		opponentID = game.WhitePlayerID.String()
-	} else {
-		opponentID = game.BlackPlayerID.String()
 	}
 
 	gameRoom := s.wsConnections.GetRoomByID(game.ID.String())
@@ -550,7 +636,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 
 	s.wsConnections.EmitToRoom(models.WebSocketChannel{
 		Source:       user.ID.String(),
-		TargetClient: opponentID,
+		TargetClient: opponentID.String(),
 		Event:        constants.WS_EVENT_EMIT_UPDATE_GAME_STATE,
 		Data: models.HandleGamePublishActionResponse{
 			State: params.State,

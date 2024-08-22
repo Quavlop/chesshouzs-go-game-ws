@@ -53,6 +53,11 @@ func main() {
 		Password: os.Getenv("REDIS_PASSWORD"),
 	}
 
+	cassandraConnection := models.CassandraConnection{
+		Host:     os.Getenv("CASSANDRA_HOST"),
+		Keyspace: os.Getenv("CASSANDRA_KEYSPACE"),
+	}
+
 	psql, err := repositories.ConnectPostgreSQL(postgresConnection)
 	if err != nil {
 		e.Logger.Fatal("Failed to connect PostgreSQL : " + err.Error())
@@ -61,6 +66,11 @@ func main() {
 	redis, err := repositories.ConnectRedis(redisConnection)
 	if err != nil {
 		e.Logger.Fatal("Failed to connect Redis : " + err.Error())
+	}
+
+	cassandra, err := repositories.ConnectCassandra(cassandraConnection)
+	if err != nil {
+		e.Logger.Fatal("Failed to connect Apache Cassandra : " + err.Error())
 	}
 
 	rpcClient, err := services.NewRpcClient(os.Getenv("RPC_SERVER"))
@@ -73,7 +83,7 @@ func main() {
 	// value : room_object consisting room_id and client list (map)
 	wsConnections.Init()
 
-	repository := repositories.NewRepository(psql, redis)
+	repository := repositories.NewRepository(psql, redis, cassandra)
 
 	httpService := services.NewHttpService(repository, &services.BaseService{}, &rpcClient)
 	websocketService := services.NewWebSocketService(repository, wsConnections, &services.BaseService{}, &rpcClient)
