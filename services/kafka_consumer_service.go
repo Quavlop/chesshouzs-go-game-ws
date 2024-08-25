@@ -70,6 +70,18 @@ func (s *kafkaConsumer) ExecuteSkillConsumer(message models.ExecuteSkillMessage)
 			return err
 		}
 
+		// apply the player state increment here
+		err = s.BaseService.WebSocketService.ApplySkillEffects(
+			message.GameId,
+			message.SkillId,
+			message.ExecutorUserId,
+			opponentID,
+			message.Position,
+		)
+		if err != nil {
+			return err
+		}
+
 		// emit event to clients
 		s.wsConnections.EmitToRoom(models.WebSocketChannel{
 			Source:       message.ExecutorUserId.String(),

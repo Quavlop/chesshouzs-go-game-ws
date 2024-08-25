@@ -1,6 +1,7 @@
 package interfaces
 
 import (
+	"github.com/google/uuid"
 	"github.com/labstack/echo"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
@@ -20,6 +21,7 @@ type MatchService interface {
 	IsMatchmakingEligible(player models.PlayerPool, opponent models.PlayerPool) bool
 	PlayerSortFilter(playerOne models.PlayerPool, playerTwo models.PlayerPool) bool
 	CleanMatchupState(c echo.Context, user models.User) error
+	ApplySkillEffects(gameID uuid.UUID, skillId uuid.UUID, playerID uuid.UUID, opponentID uuid.UUID, position models.Position) error
 }
 
 type PlayerService interface {

@@ -52,7 +52,11 @@ func (r *Repository) GetGameSkills(params models.GameSkill) ([]models.GameSkill,
 		gs.radius_y, 
 		gs.auto_trigger, 
 		gs.duration, 
-		gs.usage_count
+		gs.usage_count, 
+		gs.row_limit, 
+		gs.col_limit, 
+		gs.type, 
+		gs.permanent
 	`)
 
 	if params.ID != uuid.Nil {

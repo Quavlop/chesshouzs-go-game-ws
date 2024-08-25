@@ -649,3 +649,84 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		State: params.State,
 	}, nil
 }
+
+func (s *webSocketService) ApplySkillEffects(gameID uuid.UUID, skillId uuid.UUID, playerID uuid.UUID, opponentID uuid.UUID, position models.Position) error {
+
+	// skill info mysql
+	skillDataList, err := s.repository.GetGameSkills(models.GameSkill{
+		ID: skillId,
+	})
+	if err != nil {
+		return err
+	}
+
+	var skillInfo models.GameSkill
+	if len(skillDataList) <= 0 {
+		return errs.ERR_GAME_SKILL_DATA_NOT_FOUND
+	}
+	skillInfo = skillDataList[0]
+
+	if skillInfo.Permanent {
+		return nil
+	}
+
+	var executionTarget uuid.UUID
+	if skillInfo.Type == constants.SKILL_TYPE_BUFF {
+		executionTarget = playerID
+	} else {
+		executionTarget = opponentID
+	}
+
+	playerState, err := s.repository.GetPlayerState(models.PlayerState{
+		PlayerID: executionTarget.String(),
+		GameID:   gameID.String(),
+	})
+	if err != nil {
+		return err
+	}
+
+	var updateState map[string]models.SkillState
+	if skillInfo.Type == constants.SKILL_TYPE_BUFF {
+		updateState = playerState.BuffState
+	} else {
+		updateState = playerState.DebuffState
+	}
+
+	if updateState == nil {
+		updateState = make(map[string]models.SkillState)
+	}
+
+	// logic
+	state := updateState[skillInfo.Name]
+	if !skillInfo.AutoTrigger {
+		state.List = append(state.List, models.SkillStatus{
+			Position: models.SkillPosition{
+				Row: position.Row,
+				Col: position.Col,
+			},
+			DurationLeft: skillInfo.Duration,
+		})
+		updateState[skillInfo.Name] = state
+	} else {
+		state.DurationLeft = skillInfo.Duration
+		updateState[skillInfo.Name] = state
+	}
+
+	params := models.PlayerState{
+		PlayerID: executionTarget.String(),
+		GameID:   gameID.String(),
+	}
+
+	if skillInfo.Type == constants.SKILL_TYPE_BUFF {
+		params.BuffState = updateState
+	} else {
+		params.DebuffState = updateState
+	}
+
+	err = s.repository.UpdatePlayerState(params)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
