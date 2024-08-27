@@ -31,6 +31,8 @@
 # Ignore any binary packages for the Go dependencies
 /bin/
 
+kafka_data/
+
 .env
 storage
 

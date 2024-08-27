@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gocql/gocql"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/redis/go-redis/v9"
@@ -13,8 +14,9 @@ import (
 )
 
 type Repository struct {
-	postgres *gorm.DB
-	redis    *redis.Client
+	postgres  *gorm.DB
+	redis     *redis.Client
+	cassandra *gocql.Session
 }
 
 func ConnectPostgreSQL(psql models.SqlConnection) (*gorm.DB, error) {
@@ -51,6 +53,16 @@ func ConnectRedis(r models.RedisConnection) (*redis.Client, error) {
 	return client, nil
 }
 
-func NewRepository(postgres *gorm.DB, redis *redis.Client) interfaces.Repository {
-	return &Repository{postgres, redis}
+func ConnectCassandra(c models.CassandraConnection) (*gocql.Session, error) {
+	cluster := gocql.NewCluster(c.Host)
+	cluster.Keyspace = c.Keyspace
+	session, err := cluster.CreateSession()
+	if err != nil {
+		return session, err
+	}
+	return session, nil
+}
+
+func NewRepository(postgres *gorm.DB, redis *redis.Client, cassandra *gocql.Session) interfaces.Repository {
+	return &Repository{postgres, redis, cassandra}
 }

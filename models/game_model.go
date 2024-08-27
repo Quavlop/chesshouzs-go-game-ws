@@ -39,7 +39,14 @@ type GameTypeVariant struct {
 
 type MoveCache struct {
 	ID   uuid.UUID
+	Move string
 	Turn bool
+}
+
+type InitMatchSkillStats struct {
+	ID           uuid.UUID
+	GameSkills   []GameSkill
+	GameSkillMap map[string]int
 }
 
 type GameActiveData struct {
@@ -47,6 +54,7 @@ type GameActiveData struct {
 	WhitePlayerID     uuid.UUID
 	BlackPlayerID     uuid.UUID
 	GameTypeVariantID uuid.UUID
+	RoomID            uuid.UUID
 	MovesCacheRef     uuid.UUID
 	Moves             string
 	IsDone            bool
@@ -58,4 +66,26 @@ type GameActiveData struct {
 type EloBounds struct {
 	Upper int32
 	Lower int32
+}
+
+type GameSkill struct {
+	ID               uuid.UUID
+	Name             string
+	Description      string
+	ForSelf          bool
+	ForEnemy         bool
+	RadiusX          int
+	RadiusY          int
+	AutoTrigger      bool
+	Duration         int
+	UsageCount       int
+	Type             string
+	Permanent        bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	CurrentUserCount int `gorm:"-"`
+}
+
+type SkillUsageCount struct {
+	ID uuid.UUID
 }

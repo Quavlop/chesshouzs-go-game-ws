@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -51,6 +50,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	}
 
 	// check if player is already in game
+	// TODO add validation for ingame database psql
 	if s.wsConnections.IsClientInRoom(constants.WS_ROOM_TYPE_GAME, user.ID.String()) {
 		return result, errs.ERR_PLAYER_IN_GAME
 	}
@@ -126,6 +126,12 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, nil
 	}
 
+	skills, err := s.repository.GetGameSkills(models.GameSkill{})
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return result, err
+	}
+
 	// if found match then remove the enemy from pool and insert both into game data
 	opponent := eligibleOpponents.Player
 	result.Opponent = models.PlayerMatchmakingResponse{
@@ -145,6 +151,44 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 	})
 
 	poolCloneKey := helpers.GetPlayerPoolCloneKey(poolParams)
+
+	gameID := uuid.New()
+
+	defaultBuffSkillState := make(map[string]models.SkillState)
+	defaultDebuffSkillState := make(map[string]models.SkillState)
+
+	for _, skill := range skills {
+		if skill.Type == constants.SKILL_TYPE_BUFF && !skill.Permanent {
+			defaultBuffSkillState[skill.Name] = models.SkillState{
+				DurationLeft: 0,
+				List:         []models.SkillStatus{},
+			}
+		} else if skill.Type == constants.SKILL_TYPE_DEBUFF && !skill.Permanent {
+			defaultDebuffSkillState[skill.Name] = models.SkillState{
+				DurationLeft: 0,
+				List:         []models.SkillStatus{},
+			}
+		}
+	}
+
+	// insert player state
+	state := models.PlayerState{
+		PlayerID:    user.ID.String(),
+		GameID:      gameID.String(),
+		BuffState:   defaultBuffSkillState,
+		DebuffState: defaultDebuffSkillState,
+	}
+
+	err = s.repository.InsertPlayerState(state)
+	if err != nil {
+		return result, err
+	}
+
+	state.PlayerID = opponent.User.ID.String()
+	err = s.repository.InsertPlayerState(state)
+	if err != nil {
+		return result, err
+	}
 
 	// TODO : remove duplicate param definition below and above
 	err = s.repository.WithRedisTrx((*(client.Context)).Request().Context(), []string{redisPoolKey, poolCloneKey, moveCacheKey}, func(pipe redis.Pipeliner) error {
@@ -171,12 +215,28 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 		// insert game cache move ref to redis
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-			ID: moveCacheID,
+			ID:   moveCacheID,
+			Turn: true,
 		}, pipe)
 		if err != nil {
 			return err
 		}
 
+		err = s.repository.InsertMatchSkillCount(models.InitMatchSkillStats{
+			ID:         user.ID,
+			GameSkills: skills,
+		}, pipe)
+		if err != nil {
+			return err
+		}
+
+		err = s.repository.InsertMatchSkillCount(models.InitMatchSkillStats{
+			ID:         opponent.User.ID,
+			GameSkills: skills,
+		}, pipe)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -197,13 +257,25 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		gameTypeVariantID = gameTypeVariant[0].ID
 	}
 
+	room := s.wsConnections.CreateRoom(&models.GameRoom{
+		Type: constants.WS_ROOM_TYPE_GAME,
+	}, gameID.String())
+
+	room.AddClient(client.User.ID.String())
+	room.AddClient(opponent.User.ID.String())
+
 	// insert to mysql
-	gameID := uuid.New()
+	// roomID, err := uuid.Parse(room.GetRoomID())
+	// if err != nil {
+	// 	return result, err
+	// }
+
 	err = s.repository.InsertGameData(models.GameActiveData{
 		ID:                gameID,
 		WhitePlayerID:     client.User.ID,
 		BlackPlayerID:     opponent.User.ID,
 		GameTypeVariantID: gameTypeVariantID,
+		RoomID:            gameID,
 		MovesCacheRef:     moveCacheID,
 		StartTime:         time.Now().Format(time.RFC3339),
 	})
@@ -211,22 +283,15 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, err
 	}
 
-	s.wsConnections.EmitOneOnOne(models.WebSocketChannel{
+	s.wsConnections.EmitToRoom(models.WebSocketChannel{
 		Source:       client.User.ID.String(),
 		TargetClient: opponent.User.ID.String(),
 		Event:        constants.WS_EVENT_EMIT_START_GAME,
 		Data: models.GameData{
 			ID: gameID.String(),
 		},
+		TargetRoom: room.GetRoomID(),
 	})
-
-	room := s.wsConnections.CreateRoom(&models.GameRoom{
-		Name: gameID.String(),
-		Type: constants.WS_ROOM_TYPE_GAME,
-	})
-
-	room.AddClient(client.User.ID.String())
-	room.AddClient(opponent.User.ID.String())
 
 	result.ID = gameID.String()
 
@@ -327,13 +392,24 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 	*/
 
 	/*
-		CASE 2 : player initiator is waiting for opponent then leaves page / refresh browser
-				(found matchup, enemy accepted after initiator leaves)
-			- delete game_active data
-			- delete move cache identifier (no need to delete redis player pool and data copy)
+		CASE 2 : found matchup (start game already)
+			Note :
+			- handle refresh (if possible, disable refresh)
+			- handle move to another page (if move to another page by manually url rewrite, then redirect back to the game url)
+			- disable going back to previous page
+			- game invalidation / end only occurs when one of the player either leave the game or win the game
+
+			Step to recover disconnection while game (run when init connection)
+			-> get game data (exists on the first step)
+			-> keep the room data (do not invalidate), but delete the old connection (i guess this is implemented already)
+			-> reinitialize connection, insert player to room again
 	*/
 
-	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if user.ID == uuid.Nil {
+		return nil
+	}
+
+	_, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
 	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
 		helpers.LogErrorCallStack(c, err)
 	}
@@ -346,9 +422,8 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 				ID: user.ID,
 			},
 		})
-		fmt.Println("C 1")
+
 		if err != nil {
-			fmt.Println(err.Error())
 			return err
 		}
 
@@ -361,8 +436,6 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 			Type:        playerPoolData["game-type"],
 			TimeControl: playerPoolData["game-time-control"],
 		})
-		fmt.Println(poolKey)
-		fmt.Println(poolPlayerCloneKey)
 
 		err = s.repository.WithRedisTrx(c.Request().Context(), []string{poolKey, poolPlayerCloneKey}, func(pipe redis.Pipeliner) error {
 
@@ -372,10 +445,14 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 					ID: user.ID,
 				},
 			}, time.Time{}, pipe)
-			fmt.Println("C 2")
 			if err != nil {
-				fmt.Println(err.Error())
+				return err
+			}
 
+			err = s.repository.DeleteMatchSkillCount(models.InitMatchSkillStats{
+				ID: user.ID,
+			}, pipe)
+			if err != nil {
 				return err
 			}
 
@@ -394,10 +471,7 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 					JoinTime: joinTime,
 				},
 			}, pipe)
-			fmt.Println("C 3")
 			if err != nil {
-				fmt.Println(err.Error())
-
 				return err
 			}
 
@@ -410,12 +484,262 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 		return nil
 	}
 
-	// delete move cache identifier
-	err = s.repository.DeleteMoveCacheIdentifier(models.MoveCache{
-		ID: currentGameData.MovesCacheRef,
+	return nil
+}
+
+func (s *webSocketService) HandleConnectMatchSocketConnection(client models.WebSocketClientData, params models.HandleConnectMatchSocketConnectionParams) (models.HandleConnectMatchSocketConnectionResponse, error) {
+
+	/*
+		Step to recover disconnection while game (run when init connection)
+		-> get game data (exists on the first step)
+		-> keep the room data (do not invalidate), but delete the old connection (i guess this is implemented already)
+		-> reinitialize connection, insert player to room again
+
+
+		// CASE 1 : one player leaves, the other stays
+		- check if the room still exists
+		- if room still exists it means that the other stays,
+		- rejoin immediately by adding the connection to the room
+		- if room does not exist anymore, go to CASE 2
+
+
+		// CASE 2 : both player leaves
+		this cause the room to be deleted
+		- recreate the room with the room id from the currentGameData
+		- *the other clients will join this room
+	*/
+
+	var result models.HandleConnectMatchSocketConnectionResponse
+	user := client.User
+
+	currentGameData, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		return result, err
+	}
+
+	gameRoom := s.wsConnections.GetRoomByID(currentGameData.ID.String())
+	if gameRoom == nil {
+		// CASE 2
+		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
+			Type: constants.WS_ROOM_TYPE_GAME,
+		}, currentGameData.ID.String())
+
+		gameRoom.AddClient(user.ID.String())
+
+		return result, err
+	}
+
+	// CASE 1
+	gameRoom.AddClient(user.ID.String())
+
+	return result, nil
+}
+
+func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClientData, params models.HandleGamePublishActionParams) (models.HandleGamePublishActionResponse, error) {
+
+	user := client.User
+
+	game, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	// a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
+	// if err != nil {
+	// 	return models.HandleGamePublishActionResponse{}, err
+	// }
+
+	// if !a.Valid {
+	// 	return models.HandleGamePublishActionResponse{}, errs.ERR_INVALID_MOVE
+	// }
+
+	// TODO : validate new state
+
+	// if client color identifier is black then make turn true for white
+	// true -> white
+	// false -> black
+
+	var opponentID uuid.UUID
+	if game.WhitePlayerID == user.ID {
+		opponentID = game.BlackPlayerID
+	} else {
+		opponentID = game.WhitePlayerID
+	}
+
+	playerState, err := s.repository.GetPlayerState(models.PlayerState{
+		PlayerID: user.ID.String(),
+		GameID:   game.ID.String(),
+	})
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	gameMove, err := s.repository.GetMoveCacheIdentifier(models.MoveCache{
+		ID: game.MovesCacheRef,
+	})
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	var newTurn bool
+	if gameMove["turn"] == "1" {
+		newTurn = false
+	} else {
+		newTurn = true
+	}
+
+	// decrement all skill state duration by one
+	if len(playerState.BuffState) > 0 {
+		for name, skill := range playerState.BuffState {
+			if skill.DurationLeft > 0 {
+				skill.DurationLeft -= 1
+			}
+			for i, effects := range skill.List {
+				if effects.DurationLeft > 0 {
+					skill.List[i].DurationLeft -= 1
+				}
+			}
+			playerState.BuffState[name] = skill
+		}
+	}
+
+	if len(playerState.DebuffState) > 0 {
+		for name, skill := range playerState.DebuffState {
+			if skill.DurationLeft > 0 {
+				skill.DurationLeft -= 1
+			}
+			for i, effects := range skill.List {
+				if effects.DurationLeft > 0 {
+					skill.List[i].DurationLeft -= 1
+				}
+			}
+			playerState.DebuffState[name] = skill
+		}
+	}
+
+	if len(playerState.BuffState) > 0 || len(playerState.DebuffState) > 0 {
+		err = s.repository.UpdatePlayerState(models.PlayerState{
+			PlayerID:    user.ID.String(),
+			GameID:      game.ID.String(),
+			BuffState:   playerState.BuffState,
+			DebuffState: playerState.DebuffState,
+		})
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+	}
+
+	err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
+		ID:   game.MovesCacheRef,
+		Move: params.State,
+		Turn: newTurn,
 	}, nil)
 	if err != nil {
-		helpers.LogErrorCallStack(c, err)
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	gameRoom := s.wsConnections.GetRoomByID(game.ID.String())
+	if gameRoom == nil {
+		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
+			Type: constants.WS_ROOM_TYPE_GAME,
+		}, game.ID.String())
+	}
+
+	gameRoom.AddClient(user.ID.String())
+
+	s.wsConnections.EmitToRoom(models.WebSocketChannel{
+		Source:       user.ID.String(),
+		TargetClient: opponentID.String(),
+		Event:        constants.WS_EVENT_EMIT_UPDATE_GAME_STATE,
+		Data: models.HandleGamePublishActionResponse{
+			State: params.State,
+			Turn:  user.ID == game.BlackPlayerID,
+		},
+		TargetRoom: gameRoom.GetRoomID(),
+	})
+
+	return models.HandleGamePublishActionResponse{
+		State: params.State,
+		Turn:  newTurn,
+	}, nil
+}
+
+func (s *webSocketService) ApplySkillEffects(gameID uuid.UUID, skillId uuid.UUID, playerID uuid.UUID, opponentID uuid.UUID, position models.Position) error {
+
+	// skill info mysql
+	skillDataList, err := s.repository.GetGameSkills(models.GameSkill{
+		ID: skillId,
+	})
+	if err != nil {
+		return err
+	}
+
+	var skillInfo models.GameSkill
+	if len(skillDataList) <= 0 {
+		return errs.ERR_GAME_SKILL_DATA_NOT_FOUND
+	}
+	skillInfo = skillDataList[0]
+
+	if skillInfo.Permanent {
+		return nil
+	}
+
+	var executionTarget uuid.UUID
+	if skillInfo.Type == constants.SKILL_TYPE_BUFF {
+		executionTarget = playerID
+	} else {
+		executionTarget = opponentID
+	}
+
+	playerState, err := s.repository.GetPlayerState(models.PlayerState{
+		PlayerID: executionTarget.String(),
+		GameID:   gameID.String(),
+	})
+	if err != nil {
+		return err
+	}
+
+	var updateState map[string]models.SkillState
+	if skillInfo.Type == constants.SKILL_TYPE_BUFF {
+		updateState = playerState.BuffState
+	} else {
+		updateState = playerState.DebuffState
+	}
+
+	if updateState == nil {
+		updateState = make(map[string]models.SkillState)
+	}
+
+	// logic
+	state := updateState[skillInfo.Name]
+	if !skillInfo.AutoTrigger {
+		state.List = append(state.List, models.SkillStatus{
+			Position: models.SkillPosition{
+				Row: position.Row,
+				Col: position.Col,
+			},
+			DurationLeft: skillInfo.Duration,
+		})
+		updateState[skillInfo.Name] = state
+	} else {
+		state.DurationLeft = skillInfo.Duration
+		updateState[skillInfo.Name] = state
+	}
+
+	params := models.PlayerState{
+		PlayerID: executionTarget.String(),
+		GameID:   gameID.String(),
+	}
+
+	if skillInfo.Type == constants.SKILL_TYPE_BUFF {
+		params.BuffState = updateState
+	} else {
+		params.DebuffState = updateState
+	}
+
+	err = s.repository.UpdatePlayerState(params)
+	if err != nil {
 		return err
 	}
 

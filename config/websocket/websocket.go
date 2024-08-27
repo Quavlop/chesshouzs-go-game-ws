@@ -89,7 +89,12 @@ func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, conne
 					if err != nil {
 						isGuest = true
 					} else {
-						c.Set("user", user)
+						exp := claims["exp"].(float64)
+						if time.Now().Unix() > int64(exp) {
+							isGuest = true
+						} else {
+							c.Set("user", user)
+						}
 					}
 				}
 			}
@@ -151,7 +156,9 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.Conn, token string, connectionList *Connections, message models.WebSocketClientMessage) (models.WebSocketResponse, error) {
 	var response models.WebSocketResponse
 	var eventHandler = map[string]func(models.WebSocketClientData) (models.WebSocketResponse, error){
-		constants.WS_EVENT_INIT_MATCHMAKING: controller.HandleMatchmaking,
+		constants.WS_EVENT_INIT_MATCHMAKING:    controller.HandleMatchmaking,
+		constants.WS_EVENT_CONNECT_GAME:        controller.HandleConnectMatchSocketConnection,
+		constants.WS_EVENT_GAME_PUBLISH_ACTION: controller.HandleGamePublishAction,
 	}
 
 	handler, eventExists := eventHandler[message.Event]
@@ -163,7 +170,25 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 		}, err
 	}
 
+	// auth middleware for websocket events
+	eventTypeParse := strings.Split(message.Event, ":")
+	if len(eventTypeParse) == 1 {
+		guestToken, _ := c.Get("guest").(string)
+		if guestToken != "" {
+			errAuth := errs.ERR_UNAUTHENTICATED
+			return models.WebSocketResponse{
+				Status: constants.WS_SERVER_RESPONSE_ERROR,
+				Data:   errAuth.Error(),
+			}, errAuth
+		}
+	}
+
 	c.Set("ws-event", message.Event)
+
+	user, ok := c.Get("user").(models.User)
+	if !ok {
+		user = models.User{}
+	}
 
 	// handler()'s argument contains the connection data which belongs to the request initiator.
 	response, err := handler(models.WebSocketClientData{
@@ -171,7 +196,7 @@ func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.C
 		Token:      token,
 		Event:      message.Event,
 		Context:    &c,
-		User:       c.Get("user").(models.User),
+		User:       user,
 		Data:       message.Data,
 	})
 	if err != nil {
