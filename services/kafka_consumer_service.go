@@ -48,6 +48,21 @@ func (s *kafkaConsumer) ExecuteSkillConsumer(message models.ExecuteSkillMessage)
 			ID: game.MovesCacheRef,
 		}),
 	}
+
+	gameMove, err := s.repository.GetMoveCacheIdentifier(models.MoveCache{
+		ID: game.MovesCacheRef,
+	})
+	if err != nil {
+		return err
+	}
+
+	var newTurn bool
+	if gameMove["turn"] == "1" {
+		newTurn = false
+	} else {
+		newTurn = true
+	}
+
 	err = s.repository.WithRedisTrx(s.context, keys, func(pipe redis.Pipeliner) error {
 		// set new state redis data
 		// - skip turn
@@ -55,7 +70,7 @@ func (s *kafkaConsumer) ExecuteSkillConsumer(message models.ExecuteSkillMessage)
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID:   game.MovesCacheRef,
 			Move: message.State,
-			Turn: message.ExecutorUserId == game.BlackPlayerID,
+			Turn: newTurn,
 		}, pipe)
 		if err != nil {
 			return err

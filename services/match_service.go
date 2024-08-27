@@ -575,6 +575,20 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
+	gameMove, err := s.repository.GetMoveCacheIdentifier(models.MoveCache{
+		ID: game.MovesCacheRef,
+	})
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	var newTurn bool
+	if gameMove["turn"] == "1" {
+		newTurn = false
+	} else {
+		newTurn = true
+	}
+
 	// decrement all skill state duration by one
 	if len(playerState.BuffState) > 0 {
 		for name, skill := range playerState.BuffState {
@@ -619,7 +633,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 	err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 		ID:   game.MovesCacheRef,
 		Move: params.State,
-		Turn: user.ID == game.BlackPlayerID,
+		Turn: newTurn,
 	}, nil)
 	if err != nil {
 		return models.HandleGamePublishActionResponse{}, err
@@ -647,6 +661,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 
 	return models.HandleGamePublishActionResponse{
 		State: params.State,
+		Turn:  newTurn,
 	}, nil
 }
 

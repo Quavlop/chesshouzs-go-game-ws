@@ -33,6 +33,7 @@ type MatchRepository interface {
 	GetPlayerState(params models.PlayerState) (models.PlayerState, error)
 	InsertPlayerState(params models.PlayerState) error
 	UpdatePlayerState(params models.PlayerState) error
+	GetMoveCacheIdentifier(params models.MoveCache) (map[string]string, error)
 }
 
 type UserRepository interface {

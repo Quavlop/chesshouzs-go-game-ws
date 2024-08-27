@@ -422,3 +422,24 @@ func (r *Repository) UpdatePlayerState(params models.PlayerState) error {
 
 	return nil
 }
+
+func (r *Repository) GetMoveCacheIdentifier(params models.MoveCache) (map[string]string, error) {
+	key := helpers.GetGameMoveCacheKey(params)
+	helpers.WriteOutLog("[GET MOVE CACHE IDENTIFIER] : " + key)
+
+	timeout := helpers.GetTimeoutThreshold("DATABASE_QUERY_TIMEOUT")
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+
+	result, err := r.redis.HGetAll(ctx, key).Result()
+	if err != nil {
+		return result, err
+	}
+
+	if len(result) <= 0 {
+		return result, errs.ERR_REDIS_DATA_NOT_FOUND
+	}
+
+	return result, nil
+
+}
