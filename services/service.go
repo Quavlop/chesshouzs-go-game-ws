@@ -140,6 +140,17 @@ func NewKafkaConsumer(config KafkaConsumerConfig, kafkaImpl kafkaConsumer) {
 			if consumerErr != nil {
 				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Error when consuming message on topic %s : %s", *msg.TopicPartition.Topic, consumerErr.Error()))
 			}
+		case constants.END_GAME_TOPIC:
+			var message models.EndGameMessage
+			err := json.Unmarshal([]byte(cleanedMessage), &message)
+			if err != nil {
+				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Failed to parse message on topic %s : %s", *&msg.TopicPartition.Topic, err.Error()))
+				continue
+			}
+			consumerErr = kafkaImpl.EndGameConsumer(message)
+			if consumerErr != nil {
+				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Error when consuming message on topic %s : %s", *msg.TopicPartition.Topic, consumerErr.Error()))
+			}
 		}
 	}
 }

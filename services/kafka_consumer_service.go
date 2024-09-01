@@ -117,3 +117,22 @@ func (s *kafkaConsumer) ExecuteSkillConsumer(message models.ExecuteSkillMessage)
 
 	return nil
 }
+
+func (s *kafkaConsumer) EndGameConsumer(message models.EndGameMessage) error {
+
+	// emit event to winner
+	s.wsConnections.EmitOneOnOne(models.WebSocketChannel{
+		TargetClient: message.WinnerId.String(),
+		Event:        constants.WS_EVENT_EMIT_END_GAME,
+		Data:         message,
+	})
+
+	// emit event to loser
+	s.wsConnections.EmitOneOnOne(models.WebSocketChannel{
+		TargetClient: message.LoserId.String(),
+		Event:        constants.WS_EVENT_EMIT_END_GAME,
+		Data:         message,
+	})
+
+	return nil
+}

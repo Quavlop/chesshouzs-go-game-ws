@@ -249,6 +249,8 @@ func (r *Repository) GetPlayerCurrentGameState(token string) (models.GameActiveD
 		db = db.Where("(white_player_id = ? OR black_player_id = ?)", token, token)
 	}
 
+	db = db.Where("ga.is_done = false")
+
 	result := db.Take(&data)
 
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
@@ -441,5 +443,4 @@ func (r *Repository) GetMoveCacheIdentifier(params models.MoveCache) (map[string
 	}
 
 	return result, nil
-
 }
