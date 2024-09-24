@@ -14,6 +14,7 @@ import (
 	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/helpers/errs"
 	"ingenhouzs.com/chesshouzs/go-game/models"
+	"ingenhouzs.com/chesshouzs/go-game/services/rpc/pb"
 )
 
 // Websocket services
@@ -545,16 +546,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
-	// a, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{})
-	// if err != nil {
-	// 	return models.HandleGamePublishActionResponse{}, err
-	// }
-
-	// if !a.Valid {
-	// 	return models.HandleGamePublishActionResponse{}, errs.ERR_INVALID_MOVE
-	// }
-
-	// TODO : validate new state
+	// TODO : validate new state, flip board, send state on end game from client
 
 	// if client color identifier is black then make turn true for white
 	// true -> white
@@ -580,6 +572,20 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 	})
 	if err != nil {
 		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	if os.Getenv("VALIDATE_MOVE") == "ON" {
+		validator, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{
+			OldState: gameMove["move"],
+			NewState: params.State,
+		})
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+
+		if !validator.Valid {
+			return models.HandleGamePublishActionResponse{}, errs.ERR_INVALID_MOVE
+		}
 	}
 
 	var newTurn bool
