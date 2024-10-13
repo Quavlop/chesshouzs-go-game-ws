@@ -77,6 +77,7 @@ func main() {
 	if err != nil {
 		e.Logger.Fatal("Failed to create rpc client : " + err.Error())
 	}
+	defer rpcClient.Connection.Close()
 
 	// rooms connection
 	// key : room_id
@@ -115,4 +116,5 @@ func main() {
 	}
 
 	e.Logger.Fatal(e.Start(":" + os.Getenv("SERVICE_PORT")))
+
 }

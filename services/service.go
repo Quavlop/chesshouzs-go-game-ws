@@ -41,6 +41,7 @@ type gameRoomService struct {
 
 type rpcClient struct {
 	MatchServiceRpc pb.MatchServiceClient
+	Connection      *grpc.ClientConn
 }
 
 type KafkaConsumerConfig struct {
@@ -78,14 +79,15 @@ func NewRpcClient(serverHost string) (rpcClient, error) {
 	conn, err := grpc.DialContext(ctx, serverHost,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*50)),
 	)
 	if err != nil {
 		return client, err
 	}
-	defer conn.Close()
 
 	client = rpcClient{
 		MatchServiceRpc: pb.NewMatchServiceClient(conn),
+		Connection:      conn,
 	}
 
 	return client, nil

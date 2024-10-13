@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -546,7 +547,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
-	// TODO : validate new state, flip board, send state on end game from client
+	// TODO : validate new state, send state on end game from client
 
 	// if client color identifier is black then make turn true for white
 	// true -> white
@@ -574,10 +575,28 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
+	oldState := gameMove["move"]
+	oldStateToArr := helpers.ConvertNotationToArray(oldState)
+	if user.ID == game.BlackPlayerID {
+		oldStateToArr = helpers.TransformBoard(oldStateToArr)
+	}
+	oldState = helpers.ConvertArrayToNotation(oldStateToArr)
+	fmt.Println(oldState)
+	fmt.Println(len(oldState))
+
+	newState := params.State
+	newStateToArr := helpers.ConvertNotationToArray(newState)
+	if user.ID == game.BlackPlayerID {
+		newStateToArr = helpers.TransformBoard(newStateToArr)
+	}
+	newState = helpers.ConvertArrayToNotation(newStateToArr)
+	fmt.Println(newState)
+	fmt.Println(len(newState))
+
 	if os.Getenv("VALIDATE_MOVE") == "ON" {
 		validator, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{
-			OldState: gameMove["move"],
-			NewState: params.State,
+			OldState: oldState,
+			NewState: newState,
 		})
 		if err != nil {
 			return models.HandleGamePublishActionResponse{}, err
