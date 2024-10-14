@@ -129,9 +129,9 @@ func (c *Connections) CreateRoom(params *models.GameRoom, roomID string) *models
 }
 
 func (c *Connections) EmitOneOnOne(params models.WebSocketChannel) error {
-	sourceClient := c.IsClientActive(params.Source)
+	// sourceClient := c.IsClientActive(params.Source)
 	targetClient := c.IsClientActive(params.TargetClient)
-	if sourceClient == nil || targetClient == nil {
+	if targetClient == nil {
 		return errs.WS_CLIENT_CONNECTION_NOT_FOUND
 	}
 

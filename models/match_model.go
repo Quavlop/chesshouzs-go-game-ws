@@ -22,6 +22,7 @@ type HandleGamePublishActionResponse struct {
 	State string `json:"state"`
 	Turn  bool   `json:"turn"`
 }
+
 type GameData struct {
 	ID string `json:"id"`
 }

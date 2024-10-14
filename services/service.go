@@ -41,6 +41,7 @@ type gameRoomService struct {
 
 type rpcClient struct {
 	MatchServiceRpc pb.MatchServiceClient
+	Connection      *grpc.ClientConn
 }
 
 type KafkaConsumerConfig struct {
@@ -78,14 +79,15 @@ func NewRpcClient(serverHost string) (rpcClient, error) {
 	conn, err := grpc.DialContext(ctx, serverHost,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*50)),
 	)
 	if err != nil {
 		return client, err
 	}
-	defer conn.Close()
 
 	client = rpcClient{
 		MatchServiceRpc: pb.NewMatchServiceClient(conn),
+		Connection:      conn,
 	}
 
 	return client, nil
@@ -137,6 +139,17 @@ func NewKafkaConsumer(config KafkaConsumerConfig, kafkaImpl kafkaConsumer) {
 				continue
 			}
 			consumerErr = kafkaImpl.ExecuteSkillConsumer(message)
+			if consumerErr != nil {
+				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Error when consuming message on topic %s : %s", *msg.TopicPartition.Topic, consumerErr.Error()))
+			}
+		case constants.END_GAME_TOPIC:
+			var message models.EndGameMessage
+			err := json.Unmarshal([]byte(cleanedMessage), &message)
+			if err != nil {
+				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Failed to parse message on topic %s : %s", *&msg.TopicPartition.Topic, err.Error()))
+				continue
+			}
+			consumerErr = kafkaImpl.EndGameConsumer(message)
 			if consumerErr != nil {
 				helpers.WriteOutLog(fmt.Sprintf("[KAFKA CONSUMER] Error when consuming message on topic %s : %s", *msg.TopicPartition.Topic, consumerErr.Error()))
 			}
