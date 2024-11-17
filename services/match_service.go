@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -581,8 +580,6 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		oldStateToArr = helpers.TransformBoard(oldStateToArr)
 	}
 	oldState = helpers.ConvertArrayToNotation(oldStateToArr)
-	fmt.Println(oldState)
-	fmt.Println(len(oldState))
 
 	newState := params.State
 	newStateToArr := helpers.ConvertNotationToArray(newState)
@@ -590,8 +587,6 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		newStateToArr = helpers.TransformBoard(newStateToArr)
 	}
 	newState = helpers.ConvertArrayToNotation(newStateToArr)
-	fmt.Println(newState)
-	fmt.Println(len(newState))
 
 	if os.Getenv("VALIDATE_MOVE") == "ON" {
 		validator, err := s.rpcClient.MatchServiceRpc.ValidateMove((*(client.Context)).Request().Context(), &pb.ValidateMoveReq{
