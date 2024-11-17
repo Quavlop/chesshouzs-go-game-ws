@@ -216,8 +216,11 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 		// insert game cache move ref to redis
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-			ID:   moveCacheID,
-			Turn: true,
+			ID:                 moveCacheID,
+			Turn:               true,
+			LastMovement:       time.Now(),
+			BlackTotalDuration: 0,
+			WhiteTotalDuration: 0,
 		}, pipe)
 		if err != nil {
 			return err
@@ -650,11 +653,71 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		}
 	}
 
-	err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-		ID:   game.MovesCacheRef,
-		Move: params.State,
-		Turn: newTurn,
-	}, nil)
+	// if turn is 1, then last movement timestamp belongs to black
+	// if turn is 0, then last movement timestamp belongs to white
+
+	previousMoveTimestamp, err := time.Parse(time.RFC3339, gameMove["last_movement"])
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	currentTime := time.Now()
+	countDuration := currentTime.Sub(previousMoveTimestamp)
+
+	var whiteSpentDuration int64
+	var blackSpentDuration int64
+
+	if newTurn { // black is moving
+		intCurrentCumulativeDuration, err := strconv.ParseInt(gameMove["black_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		intEnemyCumulativeDuration, err := strconv.ParseInt(gameMove["white_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds())
+		if cumulativeDuration > game.Duration {
+			return models.HandleGamePublishActionResponse{}, errs.ERR_GAME_TIMEOUT
+		}
+
+		whiteSpentDuration = intEnemyCumulativeDuration
+		blackSpentDuration = intCurrentCumulativeDuration
+
+		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
+			ID:                 game.MovesCacheRef,
+			Move:               params.State,
+			Turn:               newTurn,
+			LastMovement:       currentTime,
+			BlackTotalDuration: cumulativeDuration,
+			WhiteTotalDuration: intEnemyCumulativeDuration,
+		}, nil)
+	} else { // white is moving
+		intCurrentCumulativeDuration, err := strconv.ParseInt(gameMove["white_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		intEnemyCumulativeDuration, err := strconv.ParseInt(gameMove["black_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds())
+		if cumulativeDuration > game.Duration {
+			return models.HandleGamePublishActionResponse{}, errs.ERR_GAME_TIMEOUT
+		}
+
+		blackSpentDuration = intEnemyCumulativeDuration
+		whiteSpentDuration = intCurrentCumulativeDuration
+
+		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
+			ID:                 game.MovesCacheRef,
+			Move:               params.State,
+			Turn:               newTurn,
+			LastMovement:       currentTime,
+			WhiteTotalDuration: cumulativeDuration,
+			BlackTotalDuration: intEnemyCumulativeDuration,
+		}, nil)
+	}
 	if err != nil {
 		return models.HandleGamePublishActionResponse{}, err
 	}
@@ -673,15 +736,19 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		TargetClient: opponentID.String(),
 		Event:        constants.WS_EVENT_EMIT_UPDATE_GAME_STATE,
 		Data: models.HandleGamePublishActionResponse{
-			State: params.State,
-			Turn:  user.ID == game.BlackPlayerID,
+			State:              params.State,
+			Turn:               user.ID == game.BlackPlayerID,
+			WhiteSpentDuration: whiteSpentDuration,
+			BlackSpentDuration: blackSpentDuration,
 		},
 		TargetRoom: gameRoom.GetRoomID(),
 	})
 
 	return models.HandleGamePublishActionResponse{
-		State: params.State,
-		Turn:  newTurn,
+		State:              params.State,
+		Turn:               newTurn,
+		WhiteSpentDuration: whiteSpentDuration,
+		BlackSpentDuration: blackSpentDuration,
 	}, nil
 }
 

@@ -127,13 +127,19 @@ func (r *Repository) InsertMoveCacheIdentifier(params models.MoveCache, pipe red
 	var result *redis.BoolCmd
 	if pipe != nil {
 		result = pipe.HMSet(ctx, key, map[string]interface{}{
-			"move": params.Move,
-			"turn": params.Turn,
+			"move":                 params.Move,
+			"turn":                 params.Turn,
+			"last_movement":        params.LastMovement,
+			"white_total_duration": params.WhiteTotalDuration,
+			"black_total_duration": params.BlackTotalDuration,
 		})
 	} else {
 		result = r.redis.HMSet(ctx, key, map[string]interface{}{
-			"move": params.Move,
-			"turn": params.Turn,
+			"move":                 params.Move,
+			"turn":                 params.Turn,
+			"last_movement":        params.LastMovement,
+			"white_total_duration": params.WhiteTotalDuration,
+			"black_total_duration": params.BlackTotalDuration,
 		})
 	}
 
@@ -243,12 +249,13 @@ func (r *Repository) GetPlayerCurrentGameState(token string) (models.GameActiveD
 	var data models.GameActiveData
 
 	db := r.postgres.Table("game_active ga").
-		Select("*")
+		Select("ga.*, gtv.duration")
 
 	if token != "" {
 		db = db.Where("(white_player_id = ? OR black_player_id = ?)", token, token)
 	}
 
+	db = db.Joins("JOIN game_type_variant gtv ON ga.game_type_variant_id = gtv.id")
 	db = db.Where("ga.is_done = false")
 
 	result := db.Take(&data)
