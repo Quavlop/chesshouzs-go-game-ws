@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -682,7 +683,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		}
 
 		whiteSpentDuration = intEnemyCumulativeDuration
-		blackSpentDuration = intCurrentCumulativeDuration
+		blackSpentDuration = cumulativeDuration
 
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID:                 game.MovesCacheRef,
@@ -707,7 +708,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		}
 
 		blackSpentDuration = intEnemyCumulativeDuration
-		whiteSpentDuration = intCurrentCumulativeDuration
+		whiteSpentDuration = cumulativeDuration
 
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID:                 game.MovesCacheRef,
@@ -743,7 +744,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		},
 		TargetRoom: gameRoom.GetRoomID(),
 	})
-
+	fmt.Println(whiteSpentDuration, blackSpentDuration)
 	return models.HandleGamePublishActionResponse{
 		State:              params.State,
 		Turn:               newTurn,
