@@ -65,7 +65,8 @@ type GameActiveData struct {
 	StartTime         string
 	EndTime           string
 
-	Duration int64
+	Duration  int64
+	Increment int64
 }
 
 type EloBounds struct {

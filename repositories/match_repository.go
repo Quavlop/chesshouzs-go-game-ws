@@ -249,7 +249,7 @@ func (r *Repository) GetPlayerCurrentGameState(token string) (models.GameActiveD
 	var data models.GameActiveData
 
 	db := r.postgres.Table("game_active ga").
-		Select("ga.*, gtv.duration")
+		Select("ga.*, gtv.duration, gtv.increment")
 
 	if token != "" {
 		db = db.Where("(white_player_id = ? OR black_player_id = ?)", token, token)

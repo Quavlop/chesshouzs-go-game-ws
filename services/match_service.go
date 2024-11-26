@@ -677,7 +677,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		if err != nil {
 			return models.HandleGamePublishActionResponse{}, err
 		}
-		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds())
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds()) - game.Increment
 		if cumulativeDuration > game.Duration {
 			return models.HandleGamePublishActionResponse{}, errs.ERR_GAME_TIMEOUT
 		}
@@ -702,7 +702,7 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		if err != nil {
 			return models.HandleGamePublishActionResponse{}, err
 		}
-		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds())
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds()) - game.Increment
 		if cumulativeDuration > game.Duration {
 			return models.HandleGamePublishActionResponse{}, errs.ERR_GAME_TIMEOUT
 		}
