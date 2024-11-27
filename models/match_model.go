@@ -18,6 +18,15 @@ type HandleGamePublishActionParams struct {
 	State string `json:"state"`
 }
 
+type GetGameTimeDurationParams struct {
+	GameID string `json:"game_id"`
+}
+
+type GetGameTimeDurationResponse struct {
+	White int64 `json:"white"`
+	Black int64 `json:"black"`
+}
+
 type HandleGamePublishActionResponse struct {
 	State              string `json:"state"`
 	Turn               bool   `json:"turn"`

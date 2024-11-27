@@ -833,3 +833,67 @@ func (s *webSocketService) ApplySkillEffects(gameID uuid.UUID, skillId uuid.UUID
 
 	return nil
 }
+
+func (s *webSocketService) GetGameTimeDuration(client models.WebSocketClientData, params models.GetGameTimeDurationParams) (models.GetGameTimeDurationResponse, error) {
+	var response models.GetGameTimeDurationResponse
+	user := client.User
+
+	game, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	data, err := s.repository.GetMoveCacheIdentifier(models.MoveCache{
+		ID: game.MovesCacheRef,
+	})
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	whiteDuration, err := strconv.Atoi(data["white_total_duration"])
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	blackDuration, err := strconv.Atoi(data["black_total_duration"])
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	lastMovement, err := time.Parse(time.RFC3339, data["last_movement"])
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	currentTime := time.Now()
+
+	diff := currentTime.Sub(lastMovement).Seconds()
+	if data["turn"] == "1" {
+		response.White = int64(whiteDuration) + int64(diff)
+		response.Black = int64(blackDuration)
+	} else {
+		response.Black = int64(blackDuration) + int64(diff)
+		response.White = int64(whiteDuration)
+	}
+
+	gameRoom := s.wsConnections.GetRoomByID(game.ID.String())
+	if gameRoom == nil {
+		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
+			Type: constants.WS_ROOM_TYPE_GAME,
+		}, game.ID.String())
+	}
+
+	fmt.Println("GABRIELA")
+	s.wsConnections.EmitToRoom(models.WebSocketChannel{
+		Event:      constants.WS_EVENT_EMIT_GET_GAME_TIME_DURATION,
+		Data:       response,
+		TargetRoom: gameRoom.GetRoomID(),
+	})
+
+	return response, nil
+}
