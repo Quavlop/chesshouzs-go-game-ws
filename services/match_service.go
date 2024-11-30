@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"strconv"
@@ -216,8 +217,11 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 
 		// insert game cache move ref to redis
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-			ID:   moveCacheID,
-			Turn: true,
+			ID:                 moveCacheID,
+			Turn:               true,
+			LastMovement:       time.Now(),
+			BlackTotalDuration: 0,
+			WhiteTotalDuration: 0,
 		}, pipe)
 		if err != nil {
 			return err
@@ -650,11 +654,71 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		}
 	}
 
-	err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-		ID:   game.MovesCacheRef,
-		Move: params.State,
-		Turn: newTurn,
-	}, nil)
+	// if turn is 1, then last movement timestamp belongs to black
+	// if turn is 0, then last movement timestamp belongs to white
+
+	previousMoveTimestamp, err := time.Parse(time.RFC3339, gameMove["last_movement"])
+	if err != nil {
+		return models.HandleGamePublishActionResponse{}, err
+	}
+
+	currentTime := time.Now()
+	countDuration := currentTime.Sub(previousMoveTimestamp)
+
+	var whiteSpentDuration int64
+	var blackSpentDuration int64
+
+	if newTurn { // black is moving
+		intCurrentCumulativeDuration, err := strconv.ParseInt(gameMove["black_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		intEnemyCumulativeDuration, err := strconv.ParseInt(gameMove["white_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds()) - game.Increment
+		if cumulativeDuration > game.Duration {
+			return models.HandleGamePublishActionResponse{}, errs.ERR_GAME_TIMEOUT
+		}
+
+		whiteSpentDuration = intEnemyCumulativeDuration
+		blackSpentDuration = cumulativeDuration
+
+		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
+			ID:                 game.MovesCacheRef,
+			Move:               params.State,
+			Turn:               newTurn,
+			LastMovement:       currentTime,
+			BlackTotalDuration: cumulativeDuration,
+			WhiteTotalDuration: intEnemyCumulativeDuration,
+		}, nil)
+	} else { // white is moving
+		intCurrentCumulativeDuration, err := strconv.ParseInt(gameMove["white_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		intEnemyCumulativeDuration, err := strconv.ParseInt(gameMove["black_total_duration"], 10, 64)
+		if err != nil {
+			return models.HandleGamePublishActionResponse{}, err
+		}
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds()) - game.Increment
+		if cumulativeDuration > game.Duration {
+			return models.HandleGamePublishActionResponse{}, errs.ERR_GAME_TIMEOUT
+		}
+
+		blackSpentDuration = intEnemyCumulativeDuration
+		whiteSpentDuration = cumulativeDuration
+
+		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
+			ID:                 game.MovesCacheRef,
+			Move:               params.State,
+			Turn:               newTurn,
+			LastMovement:       currentTime,
+			WhiteTotalDuration: cumulativeDuration,
+			BlackTotalDuration: intEnemyCumulativeDuration,
+		}, nil)
+	}
 	if err != nil {
 		return models.HandleGamePublishActionResponse{}, err
 	}
@@ -673,15 +737,19 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 		TargetClient: opponentID.String(),
 		Event:        constants.WS_EVENT_EMIT_UPDATE_GAME_STATE,
 		Data: models.HandleGamePublishActionResponse{
-			State: params.State,
-			Turn:  user.ID == game.BlackPlayerID,
+			State:              params.State,
+			Turn:               user.ID == game.BlackPlayerID,
+			WhiteSpentDuration: whiteSpentDuration,
+			BlackSpentDuration: blackSpentDuration,
 		},
 		TargetRoom: gameRoom.GetRoomID(),
 	})
-
+	fmt.Println(whiteSpentDuration, blackSpentDuration)
 	return models.HandleGamePublishActionResponse{
-		State: params.State,
-		Turn:  newTurn,
+		State:              params.State,
+		Turn:               newTurn,
+		WhiteSpentDuration: whiteSpentDuration,
+		BlackSpentDuration: blackSpentDuration,
 	}, nil
 }
 
@@ -764,4 +832,68 @@ func (s *webSocketService) ApplySkillEffects(gameID uuid.UUID, skillId uuid.UUID
 	}
 
 	return nil
+}
+
+func (s *webSocketService) GetGameTimeDuration(client models.WebSocketClientData, params models.GetGameTimeDurationParams) (models.GetGameTimeDurationResponse, error) {
+	var response models.GetGameTimeDurationResponse
+	user := client.User
+
+	game, err := s.repository.GetPlayerCurrentGameState(user.ID.String())
+	if err != nil && err != errs.ERR_ACTIVE_GAME_NOT_FOUND {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	data, err := s.repository.GetMoveCacheIdentifier(models.MoveCache{
+		ID: game.MovesCacheRef,
+	})
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	whiteDuration, err := strconv.Atoi(data["white_total_duration"])
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	blackDuration, err := strconv.Atoi(data["black_total_duration"])
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	lastMovement, err := time.Parse(time.RFC3339, data["last_movement"])
+	if err != nil {
+		helpers.LogErrorCallStack(*client.Context, err)
+		return response, err
+	}
+
+	currentTime := time.Now()
+
+	diff := currentTime.Sub(lastMovement).Seconds()
+	if data["turn"] == "1" {
+		response.White = int64(whiteDuration) + int64(diff)
+		response.Black = int64(blackDuration)
+	} else {
+		response.Black = int64(blackDuration) + int64(diff)
+		response.White = int64(whiteDuration)
+	}
+
+	gameRoom := s.wsConnections.GetRoomByID(game.ID.String())
+	if gameRoom == nil {
+		gameRoom = s.wsConnections.CreateRoom(&models.GameRoom{
+			Type: constants.WS_ROOM_TYPE_GAME,
+		}, game.ID.String())
+	}
+
+	fmt.Println("GABRIELA")
+	s.wsConnections.EmitToRoom(models.WebSocketChannel{
+		Event:      constants.WS_EVENT_EMIT_GET_GAME_TIME_DURATION,
+		Data:       response,
+		TargetRoom: gameRoom.GetRoomID(),
+	})
+
+	return response, nil
 }

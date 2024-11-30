@@ -38,9 +38,12 @@ type GameTypeVariant struct {
 }
 
 type MoveCache struct {
-	ID   uuid.UUID
-	Move string
-	Turn bool
+	ID                 uuid.UUID
+	Move               string
+	Turn               bool
+	LastMovement       time.Time
+	WhiteTotalDuration int64
+	BlackTotalDuration int64
 }
 
 type InitMatchSkillStats struct {
@@ -61,6 +64,9 @@ type GameActiveData struct {
 	WinnerPlayerID    uuid.UUID
 	StartTime         string
 	EndTime           string
+
+	Duration  int64
+	Increment int64
 }
 
 type EloBounds struct {

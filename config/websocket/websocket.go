@@ -156,9 +156,10 @@ func handleIO(c echo.Context, controller *controllers.Controller, conn *ws.Conn,
 func handleEvents(c echo.Context, controller *controllers.Controller, conn *ws.Conn, token string, connectionList *Connections, message models.WebSocketClientMessage) (models.WebSocketResponse, error) {
 	var response models.WebSocketResponse
 	var eventHandler = map[string]func(models.WebSocketClientData) (models.WebSocketResponse, error){
-		constants.WS_EVENT_INIT_MATCHMAKING:    controller.HandleMatchmaking,
-		constants.WS_EVENT_CONNECT_GAME:        controller.HandleConnectMatchSocketConnection,
-		constants.WS_EVENT_GAME_PUBLISH_ACTION: controller.HandleGamePublishAction,
+		constants.WS_EVENT_INIT_MATCHMAKING:       controller.HandleMatchmaking,
+		constants.WS_EVENT_CONNECT_GAME:           controller.HandleConnectMatchSocketConnection,
+		constants.WS_EVENT_GAME_PUBLISH_ACTION:    controller.HandleGamePublishAction,
+		constants.WS_EVENT_GET_GAME_TIME_DURATION: controller.GetGameTimeDuration,
 	}
 
 	handler, eventExists := eventHandler[message.Event]
