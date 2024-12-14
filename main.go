@@ -53,9 +53,15 @@ func main() {
 		Password: os.Getenv("REDIS_PASSWORD"),
 	}
 
+	cassandraProtoVersion, err := strconv.Atoi(os.Getenv("CASSANDRA_PROTOCOL_VERSION"))
+	if err != nil {
+		cassandraProtoVersion = 4
+	}
+
 	cassandraConnection := models.CassandraConnection{
-		Host:     os.Getenv("CASSANDRA_HOST"),
-		Keyspace: os.Getenv("CASSANDRA_KEYSPACE"),
+		Host:            os.Getenv("CASSANDRA_HOST"),
+		Keyspace:        os.Getenv("CASSANDRA_KEYSPACE"),
+		ProtocolVersion: cassandraProtoVersion,
 	}
 
 	psql, err := repositories.ConnectPostgreSQL(postgresConnection)

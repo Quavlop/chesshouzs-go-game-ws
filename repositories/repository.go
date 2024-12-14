@@ -56,6 +56,7 @@ func ConnectRedis(r models.RedisConnection) (*redis.Client, error) {
 func ConnectCassandra(c models.CassandraConnection) (*gocql.Session, error) {
 	cluster := gocql.NewCluster(c.Host)
 	cluster.Keyspace = c.Keyspace
+	cluster.ProtoVersion = c.ProtocolVersion
 	session, err := cluster.CreateSession()
 	if err != nil {
 		return session, err
