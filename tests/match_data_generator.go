@@ -3,6 +3,7 @@ package tests
 import (
 	"time"
 
+	"ingenhouzs.com/chesshouzs/go-game/helpers"
 	"ingenhouzs.com/chesshouzs/go-game/models"
 )
 
@@ -15,7 +16,9 @@ func GenerateWebSocketClientData(eloPoints int32) models.WebSocketClientData {
 }
 
 func GeneratePlayerPool() []models.PlayerPool {
-	baseTime, err := time.Parse("2006-01-02 15:04:05", "2024-01-01 10:00:00")
+	location := helpers.GetLocalTimeZone()
+
+	baseTime, err := time.ParseInLocation("2006-01-02 15:04:05", "2024-01-01 10:00:00", location)
 	if err != nil {
 		return []models.PlayerPool{}
 	}

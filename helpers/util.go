@@ -1,6 +1,9 @@
 package helpers
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 func ConvertNotationToArray(input string) [][]rune {
 	rows := strings.Split(input, "|")
@@ -45,4 +48,12 @@ func TransformBoard(array [][]rune) [][]rune {
 	}
 
 	return newState
+}
+
+func GetLocalTimeZone() *time.Location {
+	location, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return time.UTC
+	}
+	return location
 }

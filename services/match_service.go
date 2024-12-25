@@ -91,7 +91,8 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		return result, err
 	}
 
-	joinTime := time.Now()
+	location := helpers.GetLocalTimeZone()
+	joinTime := time.Now().In(location)
 	poolParams := models.PlayerPoolParams{
 		PoolParams: models.PoolParams{
 			Type:        params.Type,
@@ -219,7 +220,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
 			ID:                 moveCacheID,
 			Turn:               true,
-			LastMovement:       time.Now(),
+			LastMovement:       time.Now().In(location),
 			BlackTotalDuration: 0,
 			WhiteTotalDuration: 0,
 		}, pipe)
@@ -282,7 +283,7 @@ func (s *webSocketService) HandleMatchmaking(client models.WebSocketClientData, 
 		GameTypeVariantID: gameTypeVariantID,
 		RoomID:            gameID,
 		MovesCacheRef:     moveCacheID,
-		StartTime:         time.Now().Format(time.RFC3339),
+		StartTime:         time.Now().In(location).Format(time.RFC3339),
 	})
 	if err != nil {
 		return result, err
@@ -461,7 +462,9 @@ func (s *webSocketService) CleanMatchupState(c echo.Context, user models.User) e
 				return err
 			}
 
-			joinTime, _ := time.Parse(time.RFC3339, playerPoolData["game-join-time"])
+			location := helpers.GetLocalTimeZone()
+
+			joinTime, _ := time.ParseInLocation(time.RFC3339, playerPoolData["game-join-time"], location)
 
 			err = s.repository.DeletePlayerFromPool(models.PlayerPoolParams{
 				PoolParams: models.PoolParams{
@@ -656,13 +659,13 @@ func (s *webSocketService) HandleGamePublishAction(client models.WebSocketClient
 
 	// if turn is 1, then last movement timestamp belongs to black
 	// if turn is 0, then last movement timestamp belongs to white
-
-	previousMoveTimestamp, err := time.Parse(time.RFC3339, gameMove["last_movement"])
+	location := helpers.GetLocalTimeZone()
+	previousMoveTimestamp, err := time.ParseInLocation(time.RFC3339, gameMove["last_movement"], location)
 	if err != nil {
 		return models.HandleGamePublishActionResponse{}, err
 	}
 
-	currentTime := time.Now()
+	currentTime := time.Now().In(location)
 	countDuration := currentTime.Sub(previousMoveTimestamp)
 
 	var whiteSpentDuration int64
@@ -864,13 +867,15 @@ func (s *webSocketService) GetGameTimeDuration(client models.WebSocketClientData
 		return response, err
 	}
 
-	lastMovement, err := time.Parse(time.RFC3339, data["last_movement"])
+	location := helpers.GetLocalTimeZone()
+
+	lastMovement, err := time.ParseInLocation(time.RFC3339, data["last_movement"], location)
 	if err != nil {
 		helpers.LogErrorCallStack(*client.Context, err)
 		return response, err
 	}
 
-	currentTime := time.Now()
+	currentTime := time.Now().In(location)
 
 	diff := currentTime.Sub(lastMovement).Seconds()
 	if data["turn"] == "1" {

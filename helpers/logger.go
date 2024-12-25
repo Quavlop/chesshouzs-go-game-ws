@@ -74,6 +74,7 @@ func LogErrorCallStack(c echo.Context, err error) {
 	}
 
 	event, _ := c.Get("ws-event").(string)
+	location := GetLocalTimeZone()
 
 	if event != "" {
 		data = models.LogErrorCallStack{
@@ -81,7 +82,7 @@ func LogErrorCallStack(c echo.Context, err error) {
 			Type:       "WS_INTERNAL",
 			Event:      event,
 			RequestID:  c.Get("request_id").(string),
-			Time:       time.Now().Format(os.Getenv("TIME_FORMAT")),
+			Time:       time.Now().In(location).Format(os.Getenv("TIME_FORMAT")),
 			Message:    errMessage,
 			StackTrace: CaptureStackTrace(),
 			URI:        c.Request().URL.String(),
@@ -91,7 +92,7 @@ func LogErrorCallStack(c echo.Context, err error) {
 			Level:      "ERROR",
 			Type:       "HTTP_INTERNAL",
 			RequestID:  c.Get("request_id").(string),
-			Time:       time.Now().Format(os.Getenv("TIME_FORMAT")),
+			Time:       time.Now().In(location).Format(os.Getenv("TIME_FORMAT")),
 			Message:    errMessage,
 			StackTrace: CaptureStackTrace(),
 			URI:        c.Request().URL.String(),

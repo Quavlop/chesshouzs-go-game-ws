@@ -55,7 +55,9 @@ func initConnection(c echo.Context, connectionList *Connections, isGuest bool) (
 		connectionList.addConnection(guestID, conn)
 	}
 
-	helpers.WriteOutLog("[WEBSOCKET] CONNECTION ESTABLISHED : \"" + c.Request().RemoteAddr + " | " + c.Request().Host + " | " + time.Now().Format(os.Getenv("TIME_FORMAT")) + "\"")
+	location := helpers.GetLocalTimeZone()
+
+	helpers.WriteOutLog("[WEBSOCKET] CONNECTION ESTABLISHED : \"" + c.Request().RemoteAddr + " | " + c.Request().Host + " | " + time.Now().In(location).Format(os.Getenv("TIME_FORMAT")) + "\"")
 	return conn, nil
 }
 
@@ -83,6 +85,9 @@ func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, conne
 			if err != nil {
 				isGuest = true
 			} else {
+
+				location := helpers.GetLocalTimeZone()
+
 				if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 					userID := claims["id"].(string)
 					user, err := controller.Repository.GetUserDataByID(userID)
@@ -90,7 +95,7 @@ func NewWebSocketHandler(e *echo.Echo, controller *controllers.Controller, conne
 						isGuest = true
 					} else {
 						exp := claims["exp"].(float64)
-						if time.Now().Unix() > int64(exp) {
+						if time.Now().In(location).Unix() > int64(exp) {
 							isGuest = true
 						} else {
 							c.Set("user", user)

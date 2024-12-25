@@ -21,14 +21,15 @@ func SetRequestID(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge {
-	startTime := time.Now()
+	location := helpers.GetLocalTimeZone()
+	startTime := time.Now().In(location)
 	requestID := c.Get("request_id").(string)
 	data := models.RequestLogData{
 		Level:     "INFO",
 		Type:      "REQUEST",
 		RequestID: requestID,
 		Header:    helpers.ParseHeadersToString(c.Request().Header),
-		Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
+		Time:      time.Now().In(location).Format(os.Getenv("TIME_FORMAT")),
 		Host:      c.Request().Host,
 		Method:    c.Request().Method,
 		URI:       c.Request().URL.String(),
@@ -53,6 +54,7 @@ func LogRequest(c echo.Context, requestBody []byte) models.RequestResponseBridge
 }
 
 func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, responseBody []byte) {
+	location := helpers.GetLocalTimeZone()
 	logLevel := helpers.MapStatusResponseToLogLevel(c.Response().Status)
 	status := c.Response().Status
 	if len(responseBody) <= 0 {
@@ -63,7 +65,7 @@ func LogResponse(c echo.Context, requestMetadata models.RequestResponseBridge, r
 		Type:         "RESPONSE",
 		RequestID:    requestMetadata.RequestID,
 		Header:       helpers.ParseHeadersToString(c.Request().Header),
-		Time:         time.Now().Format(os.Getenv("TIME_FORMAT")),
+		Time:         time.Now().In(location).Format(os.Getenv("TIME_FORMAT")),
 		URI:          c.Request().URL.String(),
 		Status:       status,
 		Response:     string(responseBody),

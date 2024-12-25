@@ -12,6 +12,7 @@ import (
 )
 
 func PanicRecover(c echo.Context) {
+	location := GetLocalTimeZone()
 	if r := recover(); r != nil {
 		stackTrace := CaptureStackTrace()
 
@@ -20,7 +21,7 @@ func PanicRecover(c echo.Context) {
 			Type:      "INTERNAL_PANIC",
 			RequestID: c.Get("request_id").(string),
 			Header:    ParseHeadersToString(c.Request().Header),
-			Time:      time.Now().Format(os.Getenv("TIME_FORMAT")),
+			Time:      time.Now().In(location).Format(os.Getenv("TIME_FORMAT")),
 			URI:       c.Request().URL.String(),
 			Status:    http.StatusInternalServerError,
 			Message:   stackTrace,
