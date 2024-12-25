@@ -1,6 +1,9 @@
 package services
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"ingenhouzs.com/chesshouzs/go-game/constants"
@@ -63,15 +66,62 @@ func (s *kafkaConsumer) ExecuteSkillConsumer(message models.ExecuteSkillMessage)
 		newTurn = true
 	}
 
+	location := helpers.GetLocalTimeZone()
+	previousMoveTimestamp, err := time.ParseInLocation(time.RFC3339, gameMove["last_movement"], location)
+	if err != nil {
+		return err
+	}
+
+	currentTime := time.Now().In(location)
+	countDuration := currentTime.Sub(previousMoveTimestamp)
+
+	moveData := models.MoveCache{
+		ID:           game.MovesCacheRef,
+		Move:         message.State,
+		Turn:         newTurn,
+		LastMovement: time.Now().In(location),
+	}
+
+	if newTurn {
+		intCurrentCumulativeDuration, err := strconv.ParseInt(gameMove["black_total_duration"], 10, 64)
+		if err != nil {
+			return err
+		}
+		intEnemyCumulativeDuration, err := strconv.ParseInt(gameMove["white_total_duration"], 10, 64)
+		if err != nil {
+			return err
+		}
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds()) - game.Increment
+		if cumulativeDuration > game.Duration {
+			return errs.ERR_GAME_TIMEOUT
+		}
+
+		moveData.WhiteTotalDuration = intEnemyCumulativeDuration
+		moveData.BlackTotalDuration = cumulativeDuration
+
+	} else {
+		intCurrentCumulativeDuration, err := strconv.ParseInt(gameMove["white_total_duration"], 10, 64)
+		if err != nil {
+			return err
+		}
+		intEnemyCumulativeDuration, err := strconv.ParseInt(gameMove["black_total_duration"], 10, 64)
+		if err != nil {
+			return err
+		}
+		cumulativeDuration := intCurrentCumulativeDuration + int64(countDuration.Seconds()) - game.Increment
+		if cumulativeDuration > game.Duration {
+			return errs.ERR_GAME_TIMEOUT
+		}
+
+		moveData.BlackTotalDuration = intEnemyCumulativeDuration
+		moveData.WhiteTotalDuration = cumulativeDuration
+	}
+
 	err = s.repository.WithRedisTrx(s.context, keys, func(pipe redis.Pipeliner) error {
 		// set new state redis data
 		// - skip turn
 		// - update new state
-		err = s.repository.InsertMoveCacheIdentifier(models.MoveCache{
-			ID:   game.MovesCacheRef,
-			Move: message.State,
-			Turn: newTurn,
-		}, pipe)
+		err = s.repository.InsertMoveCacheIdentifier(moveData, pipe)
 		if err != nil {
 			return err
 		}
